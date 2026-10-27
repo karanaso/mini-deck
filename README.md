@@ -109,14 +109,14 @@ pnpm storage:ensure    # create the local directory or S3 bucket
 
 ## Localization
 
-The web interface is available in English and Greek. It follows the browser's `Accept-Language` preference on first visit, defaults to English, and provides a language switcher on the landing page and in the editor/viewer top bar. The choice is stored in a `mini-deck-locale` cookie. Deck URLs, capability tokens, deck content, and collaboration data are not affected.
+The web interface is available in English and Greek. It follows the browser's `Accept-Language` preference on first visit, defaults to English, and provides a language switcher on the landing page and in the editor/viewer top bar. The choice is stored in a `mini-deck-locale` cookie. Share links carry the editor's language as `?lang=en` or `?lang=el`, which takes precedence for the first open and is remembered. The language hint is presentation-only; capability tokens, deck content, and collaboration data are not affected.
 
 See `docs/localization.md` for the resolution order, dictionary workflow, Greek glossary, API error mapping, and translation review checklist.
 
 ## Architecture at a glance
 
 - The Yjs document is the source of truth for deck content. PostgreSQL stores a binary snapshot after debounced changes.
-- Each deck is addressed by an unguessable deck ID plus an edit or view token in the URL fragment. The fragment is never sent in the initial HTTP request.
+- Each deck is addressed by an unguessable deck ID plus an edit or view token in the URL fragment. The fragment is never sent in the initial HTTP request. Share links also carry a presentation-only `lang` query parameter; the proxy consumes it and redirects to the clean URL before the deck renders.
 - View tokens are derived from the edit token with a one-way HMAC; the collaboration server marks view connections read-only.
 - The editor and export flows share the same 1920×1080 slide renderer, so presentations and downloads match the canvas.
 - Recent decks are stored in `localStorage` only. Clearing browser storage loses the list, not the deck or its links.

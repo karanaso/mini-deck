@@ -1,0 +1,19 @@
+export const SLIDE_WIDTH = 1920;
+export const SLIDE_HEIGHT = 1080;
+export const DECK_SCHEMA_VERSION = 1;
+export const DEFAULT_TITLE = "Untitled deck";
+export const DEFAULT_SLIDE_BACKGROUND = "#ffffff";
+export const LOCAL_ORIGIN = "mini-deck:local";
+
+export const MAX_SLIDES = 100;
+export const MAX_ELEMENTS_PER_DECK = 2000;
+export const MAX_TEXT_LENGTH = 10_000;
+export const MAX_TITLE_LENGTH = 120;
+export const MAX_CLIPBOARD_ELEMENTS = 200;
+export const MAX_CLIPBOARD_BYTES = 1_000_000;
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+export const MAX_IMAGE_DIMENSION = 8000;
+export const MAX_PARTICIPANT_NAME = 40;
+export const MAX_SELECTION_IDS = 100;
+export const MAX_AWARENESS_BYTES = 16_384;
+export const MAX_WS_PAYLOAD_BYTES = 5 * 1024 * 1024;

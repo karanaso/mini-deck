@@ -1,0 +1,16 @@
+services:
+  mini-deck:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mini-deck:local
+    ports:
+      - "8080:8080"
+    volumes:
+      - mini-deck-data:/data
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+volumes:
+  mini-deck-data:
+    name: mini-deck-data

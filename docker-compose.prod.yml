@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: minideck
+    volumes:
+      - minideck-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d minideck"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minideck-minio:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} &&
+        mc mb --ignore-existing local/minideck &&
+        mc anonymous set none local/minideck
+    restart: "no"
+
+  collab:
+    build:
+      context: .
+      dockerfile: apps/collab/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/minideck
+      COLLAB_PORT: "1234"
+      COLLAB_DEBOUNCE_MS: "2000"
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:3000}
+    ports:
+      - "1234:1234"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_COLLAB_WS_URL: ${NEXT_PUBLIC_COLLAB_WS_URL:-ws://localhost:1234}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/minideck
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_COLLAB_WS_URL: ${NEXT_PUBLIC_COLLAB_WS_URL:-ws://localhost:1234}
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: minideck
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_FORCE_PATH_STYLE: "true"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    command:
+      - /bin/sh
+      - -c
+      - pnpm db:migrate && pnpm --filter @mini-deck/web start
+    restart: unless-stopped
+
+volumes:
+  minideck-postgres:
+  minideck-minio:
