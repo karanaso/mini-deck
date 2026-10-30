@@ -25,6 +25,7 @@
     "db:migrate": "bash scripts/db-migrate.sh",
     "infra:up": "docker compose up -d --wait",
     "infra:down": "docker compose down -v",
+    "image:push": "bash scripts/push-image.sh",
     "smoke:api": "tsx scripts/api-smoke.mts",
     "db:stop": "bash scripts/db-stop.sh"
   },

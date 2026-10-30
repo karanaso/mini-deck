@@ -9,7 +9,11 @@ COPY apps/web/package.json apps/web/package.json
 COPY apps/collab/package.json apps/collab/package.json
 COPY packages/deck/package.json packages/deck/package.json
 COPY packages/db/package.json packages/db/package.json
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+  pnpm install --frozen-lockfile \
+  --fetch-timeout=600000 \
+  --fetch-retries=5 \
+  --network-concurrency=4
 
 FROM deps AS build
 ARG NEXT_PUBLIC_COLLAB_WS_URL=/collab
