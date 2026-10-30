@@ -13,10 +13,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { DeckCreatedDialog } from "@/components/editor/deck-created-dialog";
+import { JoinDeckDialog } from "@/components/landing/join-deck-dialog";
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { useI18n } from "@/components/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import { messageForError, parseApiError } from "@/lib/api-error";
+import {
+  storeDeckAccessValues,
+  type DeckAccessValues,
+} from "@/lib/deck-access-values";
 import {
   addRecent,
   formatLastOpened,
@@ -31,6 +37,11 @@ export function Landing() {
   const [recents, setRecents] = useState<RecentDeck[]>([]);
   const [mounted, setMounted] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [created, setCreated] = useState<{
+    values: DeckAccessValues;
+    editToken: string;
+  } | null>(null);
 
   useEffect(() => {
     setRecents(readRecents());
@@ -52,6 +63,9 @@ export function Landing() {
         deckId: string;
         editToken: string;
         title: string;
+        joinCode: string;
+        editPin: string;
+        viewPin: string;
       };
       addRecent({
         deckId: data.deckId,
@@ -59,12 +73,25 @@ export function Landing() {
         title: data.title,
         lastOpenedAt: Date.now(),
       });
-      window.location.assign(`/d/${data.deckId}#${data.editToken}`);
+      const values: DeckAccessValues = {
+        deckId: data.deckId,
+        joinCode: data.joinCode,
+        editPin: data.editPin,
+        viewPin: data.viewPin,
+      };
+      storeDeckAccessValues(values);
+      setCreated({ values, editToken: data.editToken });
+      setCreating(false);
     } catch (error) {
       const message = messageForError(error, "landing.createError");
       toast.error(t(message.key, message.params));
       setCreating(false);
     }
+  }
+
+  function openCreatedDeck() {
+    if (!created) return;
+    window.location.assign(`/d/${created.values.deckId}#${created.editToken}`);
   }
 
   function openRecent(deck: RecentDeck) {
@@ -145,6 +172,15 @@ export function Landing() {
               >
                 <Plus className="h-5 w-5" />
                 {creating ? t("landing.creating") : t("landing.create")}
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => setJoinOpen(true)}
+                data-testid="join-deck-button"
+              >
+                <Link2 className="h-4 w-4" />
+                {t("join.open")}
               </Button>
               <span className="text-xs text-slate-600">{t("landing.createHint")}</span>
             </div>
@@ -280,6 +316,16 @@ export function Landing() {
           <span>{t("landing.footer.warning")}</span>
         </footer>
       </div>
+
+      <DeckCreatedDialog
+        open={created !== null}
+        values={created?.values ?? null}
+        onOpenChange={(open) => {
+          if (!open) openCreatedDeck();
+        }}
+        onOpenEditor={openCreatedDeck}
+      />
+      <JoinDeckDialog open={joinOpen} onOpenChange={setJoinOpen} />
     </main>
   );
 }

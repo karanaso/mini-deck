@@ -76,6 +76,7 @@ The image has working defaults. Most installations only need to choose a host po
 | `DECK_CREATE_RATE_LIMIT` / `AUTH_FAILURE_RATE_LIMIT` | `100` / `60` | Per-IP requests per minute |
 | `IMAGE_SEARCH_RATE_LIMIT` / `IMAGE_IMPORT_RATE_LIMIT` | `60` / `30` | Per-IP stock image searches and imports per minute |
 | `UNSPLASH_ACCESS_KEY` / `PEXELS_API_KEY` | unset | Optional stock image providers; keep keys server-side |
+| `DECK_SESSION_SECRET` | unset | Required in production for PIN access; 32+ characters shared with the web process |
 
 Stock image search is optional in this mode. Add the provider keys to the container environment and restart to enable search. Imported photos are stored under `STORAGE_DIR` like uploaded images, so no extra volume or migration is required.
 

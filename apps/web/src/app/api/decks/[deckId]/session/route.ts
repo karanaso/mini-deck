@@ -1,5 +1,5 @@
 import { apiError, getBearerToken, getClientIp, jsonResponse } from "@/server/api";
-import { authorizeDeck } from "@/server/auth";
+import { resolveDeckLink } from "@/server/auth";
 import { getAuthFailureLimiter } from "@/server/rate-limit";
 
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ export async function POST(
 ): Promise<Response> {
   const { deckId } = await context.params;
   const token = getBearerToken(request);
-  const access = await authorizeDeck(deckId, token);
+  const access = await resolveDeckLink(deckId, token);
 
   if (!access) {
     const limit = getAuthFailureLimiter().take(getClientIp(request));
@@ -23,5 +23,13 @@ export async function POST(
     return apiError(404, "not_found", "Deck not found");
   }
 
-  return jsonResponse({ role: access.role, title: access.title });
+  if (access.requiresPin) {
+    return jsonResponse({ requiresPin: true, role: access.role });
+  }
+
+  return jsonResponse({
+    role: access.role,
+    title: access.title,
+    protected: access.protected,
+  });
 }

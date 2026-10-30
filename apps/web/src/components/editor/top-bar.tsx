@@ -44,6 +44,8 @@ export function TopBar() {
   const {
     deckId,
     token,
+    linkToken,
+    accessProtected,
     role,
     doc,
     provider,
@@ -277,7 +279,9 @@ export function TopBar() {
           }
         }}
         deckId={deckId}
-        editToken={token}
+        linkToken={linkToken}
+        sessionToken={token}
+        accessProtected={accessProtected}
       />
       <ParticipantDialog />
     </header>

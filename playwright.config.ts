@@ -21,6 +21,11 @@ const sharedEnv = {
   NEXT_PUBLIC_COLLAB_WS_URL: "ws://localhost:1234",
   DECK_CREATE_RATE_LIMIT: "10000",
   AUTH_FAILURE_RATE_LIMIT: "10000",
+  PIN_ATTEMPT_RATE_LIMIT: "10000",
+  PIN_DECK_ATTEMPT_RATE_LIMIT: "10000",
+  JOIN_LOOKUP_RATE_LIMIT: "10000",
+  JOIN_CODE_ATTEMPT_RATE_LIMIT: "10000",
+  DECK_SESSION_SECRET: "mini-deck-e2e-session-secret-32-characters",
 };
 
 export default defineConfig({

@@ -73,10 +73,9 @@ export function ImageSearchDialog({
   const requestId = useRef(0);
 
   useEffect(() => {
-    if (providers.length > 0 && !providers.includes(provider)) {
-      setProvider(providers[0]);
-    }
-  }, [provider, providers]);
+    if (!open) return;
+    if (providers.length > 0) setProvider(providers[0]);
+  }, [open, providers]);
 
   useEffect(() => {
     if (!open) {
@@ -129,7 +128,7 @@ export function ImageSearchDialog({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void runSearch(provider, query, 1, false);
+    void runSearch(activeProvider, query, 1, false);
   }
 
   function chooseProvider(next: StockProviderId) {
@@ -142,7 +141,7 @@ export function ImageSearchDialog({
   function chooseOrientation(next: StockOrientation) {
     setOrientation(next);
     if (submittedQuery) {
-      void runSearch(provider, submittedQuery, 1, false);
+      void runSearch(activeProvider, submittedQuery, 1, false);
     }
   }
 
@@ -166,6 +165,9 @@ export function ImageSearchDialog({
   }
 
   const errorMessage = error ? messageForError(error, "editor.image.importError") : null;
+  const activeProvider = providers.includes(provider)
+    ? provider
+    : (providers[0] ?? "unsplash");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -214,10 +216,10 @@ export function ImageSearchDialog({
                 key={entry}
                 type="button"
                 onClick={() => chooseProvider(entry)}
-                aria-pressed={provider === entry}
+                aria-pressed={activeProvider === entry}
                 data-testid={`image-provider-${entry}`}
                 className={
-                  provider === entry
+                  activeProvider === entry
                     ? "rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 shadow-sm"
                     : "rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900"
                 }
@@ -258,7 +260,7 @@ export function ImageSearchDialog({
               variant="outline"
               size="sm"
               onClick={() =>
-                void runSearch(provider, query || submittedQuery, page, false)
+                void runSearch(activeProvider, query || submittedQuery, page, false)
               }
             >
               {t("common.tryAgain")}
@@ -360,7 +362,7 @@ export function ImageSearchDialog({
               variant="outline"
               size="sm"
               onClick={() =>
-                void runSearch(provider, submittedQuery, page + 1, true)
+                void runSearch(activeProvider, submittedQuery, page + 1, true)
               }
               disabled={loadingMore}
               data-testid="image-load-more"

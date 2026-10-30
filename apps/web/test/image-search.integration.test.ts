@@ -3,16 +3,15 @@ import { eq } from "drizzle-orm";
 import sharp from "sharp";
 
 import { deckAssets, getDatabase } from "@mini-deck/db";
-import { deriveViewToken } from "@mini-deck/deck";
 
 import { GET as searchImages } from "@/app/api/decks/[deckId]/image-search/route";
 import { POST as importImage } from "@/app/api/decks/[deckId]/image-search/import/route";
-import { POST as createDeckRoute } from "@/app/api/decks/route";
 import { resetServerEnvForTests } from "@/server/env";
 import { resetRateLimitersForTests } from "@/server/rate-limit";
 import { resetStockSearchCacheForTests } from "@/server/stock-images/cache";
 import { resetAssetStorageForTests } from "@/server/storage";
 import { resetIntegrationState } from "../../../test/integration-helpers";
+import { createProtectedDeck, unlockDeck } from "./access-helpers";
 
 interface CreatedDeck {
   deckId: string;
@@ -40,19 +39,14 @@ const unsplashResult = {
   alt_description: "A mountain",
 };
 
-async function createTestDeck(ip = "127.0.0.1"): Promise<CreatedDeck> {
-  const response = await createDeckRoute(
-    new Request("http://localhost/api/decks", {
-      method: "POST",
-      headers: { "x-forwarded-for": ip },
-    }),
-  );
-  expect(response.status).toBe(201);
-  const data = (await response.json()) as { deckId: string; editToken: string };
+async function createTestDeck(): Promise<CreatedDeck> {
+  const deck = await createProtectedDeck();
+  const editor = await unlockDeck(deck.deckId, deck.editToken, deck.editPin);
+  const viewer = await unlockDeck(deck.deckId, deck.viewToken, deck.viewPin);
   return {
-    deckId: data.deckId,
-    editToken: data.editToken,
-    viewToken: await deriveViewToken(data.editToken, data.deckId),
+    deckId: deck.deckId,
+    editToken: editor.unlockToken,
+    viewToken: viewer.unlockToken,
   };
 }
 

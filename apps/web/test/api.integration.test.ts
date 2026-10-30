@@ -14,11 +14,15 @@ import { GET as healthRoute } from "@/app/api/health/route";
 import { getDeckCreateLimiter, resetRateLimitersForTests } from "@/server/rate-limit";
 import { resetAssetStorageForTests } from "@/server/storage";
 import { resetIntegrationState } from "../../../test/integration-helpers";
+import { unlockDeck } from "./access-helpers";
 
 interface CreatedDeck {
   deckId: string;
   editToken: string;
   viewToken: string;
+  joinCode: string;
+  editPin: string;
+  viewPin: string;
   title: string;
 }
 
@@ -34,6 +38,9 @@ async function createTestDeck(ip = "127.0.0.1"): Promise<CreatedDeck> {
     deckId: string;
     editToken: string;
     title: string;
+    joinCode: string;
+    editPin: string;
+    viewPin: string;
   };
   return {
     ...data,
@@ -83,26 +90,33 @@ describe("deck creation and session APIs", () => {
 
   it("resolves edit and view roles without returning tokens", async () => {
     const created = await createTestDeck();
+    const editor = await unlockDeck(created.deckId, created.editToken, created.editPin);
     const editorResponse = await sessionRoute(
-      sessionRequest(created.deckId, created.editToken),
+      sessionRequest(created.deckId, editor.unlockToken),
       params({ deckId: created.deckId }),
     );
     expect(editorResponse.status).toBe(200);
     const editorBody = await editorResponse.json();
-    expect(editorBody).toEqual({ role: "editor", title: "Untitled deck" });
+    expect(editorBody).toEqual({
+      role: "editor",
+      title: "Untitled deck",
+      protected: true,
+    });
     expect(JSON.stringify(editorBody)).not.toContain(created.editToken);
     expect(editorResponse.headers.get("cache-control")).toBe("no-store");
     expect(editorResponse.headers.get("referrer-policy")).toBe("no-referrer");
     expect(editorResponse.headers.get("x-content-type-options")).toBe("nosniff");
 
+    const viewer = await unlockDeck(created.deckId, created.viewToken, created.viewPin);
     const viewerResponse = await sessionRoute(
-      sessionRequest(created.deckId, created.viewToken),
+      sessionRequest(created.deckId, viewer.unlockToken),
       params({ deckId: created.deckId }),
     );
     expect(viewerResponse.status).toBe(200);
     expect(await viewerResponse.json()).toEqual({
       role: "viewer",
       title: "Untitled deck",
+      protected: true,
     });
   });
 
@@ -155,13 +169,14 @@ describe("asset APIs", () => {
 
   it("uploads, stores, and serves an image", async () => {
     const created = await createTestDeck();
+    const editor = await unlockDeck(created.deckId, created.editToken, created.editPin);
     const form = new FormData();
     form.set("file", await imageFile());
 
     const response = await uploadAsset(
       new Request(`http://localhost/api/decks/${created.deckId}/assets`, {
         method: "POST",
-        headers: { authorization: `Bearer ${created.editToken}` },
+        headers: { authorization: `Bearer ${editor.unlockToken}` },
         body: form,
       }),
       params({ deckId: created.deckId }),
@@ -195,12 +210,14 @@ describe("asset APIs", () => {
 
   it("rejects viewers, oversized files, SVGs, and corrupt data", async () => {
     const created = await createTestDeck();
+    const editor = await unlockDeck(created.deckId, created.editToken, created.editPin);
+    const viewer = await unlockDeck(created.deckId, created.viewToken, created.viewPin);
     const viewerForm = new FormData();
     viewerForm.set("file", await imageFile());
     const viewerResponse = await uploadAsset(
       new Request(`http://localhost/api/decks/${created.deckId}/assets`, {
         method: "POST",
-        headers: { authorization: `Bearer ${created.viewToken}` },
+        headers: { authorization: `Bearer ${viewer.unlockToken}` },
         body: viewerForm,
       }),
       params({ deckId: created.deckId }),
@@ -215,7 +232,7 @@ describe("asset APIs", () => {
     const oversized = await uploadAsset(
       new Request(`http://localhost/api/decks/${created.deckId}/assets`, {
         method: "POST",
-        headers: { authorization: `Bearer ${created.editToken}` },
+        headers: { authorization: `Bearer ${editor.unlockToken}` },
         body: oversizedForm,
       }),
       params({ deckId: created.deckId }),
@@ -233,7 +250,7 @@ describe("asset APIs", () => {
     const svg = await uploadAsset(
       new Request(`http://localhost/api/decks/${created.deckId}/assets`, {
         method: "POST",
-        headers: { authorization: `Bearer ${created.editToken}` },
+        headers: { authorization: `Bearer ${editor.unlockToken}` },
         body: svgForm,
       }),
       params({ deckId: created.deckId }),
@@ -248,7 +265,7 @@ describe("asset APIs", () => {
     const corrupt = await uploadAsset(
       new Request(`http://localhost/api/decks/${created.deckId}/assets`, {
         method: "POST",
-        headers: { authorization: `Bearer ${created.editToken}` },
+        headers: { authorization: `Bearer ${editor.unlockToken}` },
         body: corruptForm,
       }),
       params({ deckId: created.deckId }),

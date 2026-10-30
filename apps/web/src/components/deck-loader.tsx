@@ -6,16 +6,33 @@ import { ArrowLeft, Loader2, LockKeyhole, RefreshCcw } from "lucide-react";
 
 import { DeckProvider } from "@/components/editor/deck-provider";
 import { EditorWorkspace } from "@/components/editor/editor-workspace";
+import { PinGate } from "@/components/editor/pin-gate";
 import { useI18n } from "@/components/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import { addRecent } from "@/lib/recents";
-import { fetchDeckSession, readFragmentToken, type DeckSession } from "@/lib/session";
+import {
+  fetchDeckSession,
+  readFragmentToken,
+  type DeckSession,
+  type UnlockResult,
+} from "@/lib/session";
+import {
+  clearUnlockSession,
+  readUnlockSession,
+  storeUnlockSession,
+} from "@/lib/unlock-session";
 
 type LoadState =
   | { status: "loading" }
+  | { status: "pin"; role: "editor" | "viewer"; linkToken: string }
   | { status: "not-found" }
   | { status: "error" }
-  | { status: "ready"; session: DeckSession; token: string };
+  | {
+      status: "ready";
+      session: DeckSession;
+      token: string;
+      linkToken: string | null;
+    };
 
 export function DeckLoader({ deckId }: { deckId: string }) {
   const { t } = useI18n();
@@ -30,40 +47,127 @@ export function DeckLoader({ deckId }: { deckId: string }) {
 
   useEffect(() => {
     let active = true;
-    const token = readFragmentToken(window.location.hash);
-    if (!token) {
+    const linkToken = readFragmentToken(window.location.hash);
+    const stored = readUnlockSession(deckId);
+
+    if (!linkToken && !stored) {
       setState({ status: "not-found" });
       return;
     }
 
     setState({ status: "loading" });
-    fetchDeckSession(deckId, token)
-      .then((session) => {
-        if (!active) return;
-        if (!session) {
+
+    async function resolveSession(): Promise<void> {
+      if (!linkToken) {
+        if (!stored) {
           setState({ status: "not-found" });
           return;
         }
-        if (session.role === "editor") {
+        const result = await fetchDeckSession(deckId, stored.token);
+        if (!active) return;
+        if (result.status === "ready") {
+          setState({
+            status: "ready",
+            session: result.session,
+            token: stored.token,
+            linkToken: null,
+          });
+          return;
+        }
+        clearUnlockSession(deckId);
+        setState({ status: "not-found" });
+        return;
+      }
+
+      const linkResult = await fetchDeckSession(deckId, linkToken);
+      if (!active) return;
+      if (linkResult.status === "not_found") {
+        clearUnlockSession(deckId);
+        setState({ status: "not-found" });
+        return;
+      }
+
+      if (linkResult.status === "ready") {
+        if (linkResult.session.role === "editor") {
           addRecent({
             deckId,
-            editToken: token,
-            title: session.title,
+            editToken: linkToken,
+            title: linkResult.session.title,
             lastOpenedAt: Date.now(),
           });
         }
-        setState({ status: "ready", session, token });
-      })
-      .catch((error: unknown) => {
+        setState({
+          status: "ready",
+          session: linkResult.session,
+          token: linkToken,
+          linkToken,
+        });
+        return;
+      }
+
+      if (stored && stored.role === linkResult.role) {
+        const storedResult = await fetchDeckSession(deckId, stored.token);
         if (!active) return;
-        console.error("Could not open deck", error);
-        setState({ status: "error" });
-      });
+        if (storedResult.status === "ready") {
+          if (storedResult.session.role === "editor") {
+            addRecent({
+              deckId,
+              editToken: linkToken,
+              title: storedResult.session.title,
+              lastOpenedAt: Date.now(),
+            });
+          }
+          setState({
+            status: "ready",
+            session: storedResult.session,
+            token: stored.token,
+            linkToken,
+          });
+          return;
+        }
+        clearUnlockSession(deckId);
+      }
+
+      setState({ status: "pin", role: linkResult.role, linkToken });
+    }
+
+    resolveSession().catch((error: unknown) => {
+      if (!active) return;
+      console.error("Could not open deck", error);
+      setState({ status: "error" });
+    });
 
     return () => {
       active = false;
     };
   }, [deckId, attempt]);
+
+  function handleUnlocked(result: UnlockResult, linkToken: string): void {
+    storeUnlockSession({
+      deckId,
+      role: result.role,
+      token: result.unlockToken,
+      expiresAt: result.expiresAt,
+    });
+    if (result.role === "editor") {
+      addRecent({
+        deckId,
+        editToken: linkToken,
+        title: result.title,
+        lastOpenedAt: Date.now(),
+      });
+    }
+    setState({
+      status: "ready",
+      session: {
+        role: result.role,
+        title: result.title,
+        protected: result.protected,
+      },
+      token: result.unlockToken,
+      linkToken,
+    });
+  }
 
   if (state.status === "loading") {
     return (
@@ -73,6 +177,17 @@ export function DeckLoader({ deckId }: { deckId: string }) {
           <p className="text-sm font-medium">{t("deckShell.opening")}</p>
         </div>
       </main>
+    );
+  }
+
+  if (state.status === "pin") {
+    return (
+      <PinGate
+        deckId={deckId}
+        linkToken={state.linkToken}
+        role={state.role}
+        onUnlocked={(result) => handleUnlocked(result, state.linkToken)}
+      />
     );
   }
 
@@ -120,7 +235,13 @@ export function DeckLoader({ deckId }: { deckId: string }) {
   }
 
   return (
-    <DeckProvider deckId={deckId} token={state.token} role={state.session.role}>
+    <DeckProvider
+      deckId={deckId}
+      token={state.token}
+      linkToken={state.linkToken}
+      accessProtected={state.session.protected}
+      role={state.session.role}
+    >
       <EditorWorkspace />
     </DeckProvider>
   );

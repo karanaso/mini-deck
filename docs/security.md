@@ -10,8 +10,19 @@ Scope: capability links, HTTP APIs, WebSocket collaboration, asset handling, cli
 - View tokens are derived with HMAC-SHA-256 from the edit token and deck ID. They are one-way.
 - Tokens live in the URL fragment, never in the initial HTTP request, server access logs, or `Referer`.
 - Only SHA-256 token hashes are stored. Role resolution uses timing-safe comparison with the edit hash checked first.
-- API and WebSocket authorization require the bearer token; no cookie-based sessions, so classic CSRF does not apply.
+- API and WebSocket authorization require the bearer token or a signed unlock session; no cookie-based sessions, so classic CSRF does not apply.
 - Invalid, tampered, and unknown links return the same generic 404.
+
+### Deck access PINs
+
+- New decks receive a unique seven-digit join code and two six-digit role PINs generated from a cryptographic random source.
+- Role PINs are stored only as salted scrypt hashes. A six-digit PIN is low entropy, so scrypt and attempt limits are required.
+- Unlocks are stateless 30-day HMAC-signed sessions bound to the deck, role, and PIN version. `DECK_SESSION_SECRET` is shared by the web and collaboration services and must be at least 32 characters in production.
+- The join code is a public identifier, not a secret. It resolves only the deck title; slide content and collaboration require a role PIN.
+- A raw edit or view link token does not authorize protected deck APIs or collaboration. The collaboration server rejects link tokens when the deck has role PIN hashes.
+- Reset access rotates the join code and both PINs and increments the PIN version, invalidating all prior unlock sessions and values.
+- Join lookups and PIN attempts are rate-limited per client, code, and deck. The limits are process-local.
+- A forgotten PIN is recoverable only through an existing edit unlock session; losing every access value and remembered session makes the deck unreachable.
 
 ### Read-only enforcement
 
@@ -55,14 +66,14 @@ Scope: capability links, HTTP APIs, WebSocket collaboration, asset handling, cli
 
 ### Abuse resistance
 
-- In-memory token buckets limit deck creation, failed token attempts, stock image search, and stock image import per IP.
+- In-memory token buckets limit deck creation, failed token attempts, stock image search, stock image import, join-code lookups, and PIN attempts per IP and deck.
 - Image processing and WebSocket payloads are size-limited.
 - SQL is parameterized through Drizzle.
 - Logs redact tokens and contain deck ID, role, socket ID, and outcome only.
 
 ## Findings and accepted risks
 
-1. **No link revocation.** Anyone with an edit link can edit and reshare. This is a product limitation, documented in the share dialog. Future owner keys/link rotation will address it.
+1. **Links have no expiry.** Anyone with a protected link and its role PIN can access the deck until an editor resets access. Link revocation itself is not available; reset rotates all access values.
 2. **No account ownership or recovery.** The device-local recent list is the only index; clearing storage loses the list, not the deck.
 3. **CSP uses `unsafe-inline` for scripts/styles.** Next.js inline bootstrap styles/scripts require it without a nonce pipeline. `unsafe-eval` is development-only; production removes it. Adding a nonce-based CSP is recommended before a public launch.
 4. **Fragment tokens are readable by browser extensions and remain in browser history.** This is inherent to link-based access. The app avoids third-party scripts and documents that links are secrets.
@@ -75,7 +86,8 @@ Scope: capability links, HTTP APIs, WebSocket collaboration, asset handling, cli
 - `packages/deck/test/tokens.test.ts` — token entropy/derivation/hash/role.
 - `packages/deck/test/clipboard.test.ts` — malformed/oversized clipboard data.
 - `apps/web/test/api.integration.test.ts` — hashed storage, generic 404, headers, upload validation, viewer rejection, rate limiting.
-- `apps/collab/test/collab.integration.test.ts` — invalid tokens, read-only writes, awareness, persistence, log redaction.
+- `apps/web/test/access.integration.test.ts` — PIN creation, link unlock, join lookup/unlock, reset rotation, legacy link-only decks.
+- `apps/collab/test/collab.integration.test.ts` — invalid tokens, link-token rejection for protected decks, unlock sessions, read-only writes, awareness, persistence, log redaction.
 - `e2e/sharing.spec.ts` — fragment privacy, headers, share dialog, viewer restrictions.
 - `e2e/clipboard.spec.ts` — malformed envelopes and read-only paste.
 - `e2e/export.spec.ts` — missing asset failure without a partial download.

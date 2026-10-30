@@ -82,6 +82,15 @@ const enMessages = {
   "deckShell.errorPage.title": "The deck hit an unexpected error",
   "deckShell.errorPage.body":
     "Your work is autosaved on the collaboration server. Try loading the view again, or return to the landing page.",
+  "deckShell.pin.title": "Deck protected",
+  "deckShell.pin.editBody": "Enter the edit PIN to open this deck.",
+  "deckShell.pin.viewBody": "Enter the view PIN to open this deck read-only.",
+  "deckShell.pin.editLabel": "Edit PIN",
+  "deckShell.pin.viewLabel": "View PIN",
+  "deckShell.pin.unlock": "Unlock deck",
+  "deckShell.pin.unlocking": "Unlocking…",
+  "deckShell.pin.invalidLength": "Enter all six digits.",
+  "deckShell.pin.error": "Could not unlock the deck.",
 
   // Editor top bar and connection state
   "editor.backToAllDecks": "Back to all decks",
@@ -287,6 +296,43 @@ const enMessages = {
   "editor.pasteTextError": "Could not paste the text",
   "editor.duplicated": "Duplicated",
 
+  // Join by code
+  "join.open": "Join a deck",
+  "join.title": "Join a deck",
+  "join.description": "Enter the seven-digit code from the deck's share dialog.",
+  "join.codeLabel": "Join code",
+  "join.findDeck": "Find deck",
+  "join.lookingUp": "Looking up…",
+  "join.found": "Deck found",
+  "join.edit": "Edit deck",
+  "join.view": "View deck",
+  "join.otherCode": "Use another code",
+  "join.editPinHint": "Enter the edit PIN.",
+  "join.viewPinHint": "Enter the view PIN.",
+  "join.unlocking": "Unlocking…",
+  "join.backToRole": "Back",
+
+  // Access values
+  "access.created.title": "Deck created",
+  "access.created.description":
+    "Save these values now. You will need them to open the deck from another browser.",
+  "access.created.warning":
+    "Anyone with the join code or a link and the matching PIN can open this deck. Share the link/code and PIN separately. If you lose all three values and every remembered browser session, an editor can reset them only from an unlocked session.",
+  "access.created.openEditor": "Open editor",
+  "access.title": "Access values",
+  "access.joinCode": "Join code",
+  "access.editPin": "Edit PIN",
+  "access.viewPin": "View PIN",
+  "access.copyValue": "Copy {label}",
+  "access.unknown":
+    "These values are stored only on the browser that created the deck. Reset access to generate a new join code and PINs.",
+  "access.reset.action": "Reset access",
+  "access.reset.warning":
+    "This generates a new join code and PINs, invalidates all current sessions, and signs collaborators out. Continue?",
+  "access.reset.confirm": "Reset access",
+  "access.reset.done": "Access reset",
+  "access.reset.error": "Could not reset access",
+
   // Share dialog
   "share.title": "Share this deck",
   "share.description": "Send either link. No account or invitation is required.",
@@ -299,6 +345,10 @@ const enMessages = {
   "share.error": "Could not create the share links",
   "share.warning":
     "Anyone with a link can access the deck without signing in. Edit links are bearer secrets and cannot be revoked in this version — share them carefully.",
+  "share.warningProtected":
+    "A link or join code plus its role PIN is required. Anyone holding both can open the deck without an account.",
+  "share.linksUnavailable":
+    "This editor session was opened with a join code, so the original links are not available on this browser. Share the code and PINs below instead.",
   "share.editUrlLabel": "Edit link URL",
   "share.viewUrlLabel": "View link URL",
 
@@ -337,6 +387,11 @@ const enMessages = {
   "errors.api.image_too_large": "Images must be {maxMb} MB or smaller",
   "errors.api.unsupported_image": "Use a PNG, JPEG, or WebP image",
   "errors.api.invalid_image": "The image could not be processed",
+  "errors.api.invalid_pin": "That PIN is not valid.",
+  "errors.api.pin_not_required": "This deck does not require a PIN.",
+  "errors.api.access_not_configured": "Deck access is not configured on the server.",
+  "errors.api.pins_not_configured": "This deck does not use PIN access.",
+  "errors.api.invalid_request": "The request could not be processed.",
   "errors.api.provider_not_configured":
     "That image provider is not configured",
   "errors.api.provider_rate_limited":

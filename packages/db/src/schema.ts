@@ -24,6 +24,10 @@ export const decks = pgTable("decks", {
   title: text("title").notNull(),
   editTokenHash: text("edit_token_hash").notNull(),
   viewTokenHash: text("view_token_hash").notNull(),
+  joinCode: text("join_code").unique(),
+  editPinHash: text("edit_pin_hash"),
+  viewPinHash: text("view_pin_hash"),
+  pinVersion: integer("pin_version").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

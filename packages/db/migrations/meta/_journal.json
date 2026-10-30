@@ -8,6 +8,13 @@
       "when": 1793006137668,
       "tag": "0000_fair_zombie",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793371420719,
+      "tag": "0001_salty_epoch",
+      "breakpoints": true
     }
   ]
 }

@@ -84,6 +84,16 @@ export const el: EnglishDictionary = {
   "deckShell.errorPage.title": "Το deck αντιμετώπισε ένα απρόσμενο σφάλμα",
   "deckShell.errorPage.body":
     "Η εργασία σου αποθηκεύεται αυτόματα στον διακομιστή συνεργασίας. Δοκίμασε να φορτώσεις ξανά την προβολή ή επέστρεψε στην αρχική σελίδα.",
+  "deckShell.pin.title": "Το deck είναι προστατευμένο",
+  "deckShell.pin.editBody": "Εισήγαγε το PIN επεξεργασίας για να ανοίξεις το deck.",
+  "deckShell.pin.viewBody":
+    "Εισήγαγε το PIN προβολής για να ανοίξεις το deck σε λειτουργία ανάγνωσης.",
+  "deckShell.pin.editLabel": "PIN επεξεργασίας",
+  "deckShell.pin.viewLabel": "PIN προβολής",
+  "deckShell.pin.unlock": "Ξεκλείδωμα deck",
+  "deckShell.pin.unlocking": "Ξεκλείδωμα…",
+  "deckShell.pin.invalidLength": "Εισήγαγε και τα έξι ψηφία.",
+  "deckShell.pin.error": "Δεν ήταν δυνατό το ξεκλείδωμα του deck.",
 
   // Editor top bar and connection state
   "editor.backToAllDecks": "Επιστροφή σε όλα τα deck",
@@ -292,6 +302,44 @@ export const el: EnglishDictionary = {
   "editor.pasteTextError": "Δεν ήταν δυνατή η επικόλληση του κειμένου",
   "editor.duplicated": "Διπλασιάστηκε",
 
+  // Join by code
+  "join.open": "Σύνδεση σε deck",
+  "join.title": "Σύνδεση σε deck",
+  "join.description":
+    "Εισήγαγε τον επταψήφιο κωδικό από το παράθυρο κοινοποίησης του deck.",
+  "join.codeLabel": "Κωδικός σύνδεσης",
+  "join.findDeck": "Εύρεση deck",
+  "join.lookingUp": "Αναζήτηση…",
+  "join.found": "Το deck βρέθηκε",
+  "join.edit": "Επεξεργασία deck",
+  "join.view": "Προβολή deck",
+  "join.otherCode": "Χρήση άλλου κωδικού",
+  "join.editPinHint": "Εισήγαγε το PIN επεξεργασίας.",
+  "join.viewPinHint": "Εισήγαγε το PIN προβολής.",
+  "join.unlocking": "Ξεκλείδωμα…",
+  "join.backToRole": "Πίσω",
+
+  // Access values
+  "access.created.title": "Το deck δημιουργήθηκε",
+  "access.created.description":
+    "Αποθήκευσε αυτές τις τιμές τώρα. Θα τις χρειαστείς για να ανοίξεις το deck από άλλο πρόγραμμα περιήγησης.",
+  "access.created.warning":
+    "Όποιος έχει τον κωδικό σύνδεσης ή έναν σύνδεσμο και το αντίστοιχο PIN μπορεί να ανοίξει αυτό το deck. Μοιράσου τον σύνδεσμο/κωδικό και το PIN ξεχωριστά. Αν χάσεις και τις τρεις τιμές και όλες τις αποθηκευμένες συνεδρίες, ένας editor μπορεί να τις επαναφέρει μόνο από ενεργή συνεδρία.",
+  "access.created.openEditor": "Άνοιγμα editor",
+  "access.title": "Τιμές πρόσβασης",
+  "access.joinCode": "Κωδικός σύνδεσης",
+  "access.editPin": "PIN επεξεργασίας",
+  "access.viewPin": "PIN προβολής",
+  "access.copyValue": "Αντιγραφή {label}",
+  "access.unknown":
+    "Αυτές οι τιμές αποθηκεύονται μόνο στο πρόγραμμα περιήγησης που δημιούργησε το deck. Κάνε επαναφορά πρόσβασης για νέο κωδικό και PIN.",
+  "access.reset.action": "Επαναφορά πρόσβασης",
+  "access.reset.warning":
+    "Αυτό δημιουργεί νέο κωδικό σύνδεσης και PIN, ακυρώνει όλες τις τρέχουσες συνεδρίες και αποσυνδέει τους συνεργάτες. Συνέχεια;",
+  "access.reset.confirm": "Επαναφορά",
+  "access.reset.done": "Η πρόσβαση επαναφέρθηκε",
+  "access.reset.error": "Δεν ήταν δυνατή η επαναφορά πρόσβασης",
+
   // Share dialog
   "share.title": "Κοινοποίηση αυτού του deck",
   "share.description":
@@ -308,6 +356,10 @@ export const el: EnglishDictionary = {
     "Δεν ήταν δυνατή η δημιουργία των συνδέσμων κοινοποίησης",
   "share.warning":
     "Όποιος έχει έναν σύνδεσμο μπορεί να αποκτήσει πρόσβαση στο deck χωρίς να συνδεθεί. Οι σύνδεσμοι επεξεργασίας είναι μυστικά και δεν μπορούν να ανακληθούν σε αυτή την έκδοση — κοινοποίησέ τους με προσοχή.",
+  "share.warningProtected":
+    "Όποιος έχει έναν σύνδεσμο ή κωδικό σύνδεσης και το αντίστοιχο PIN μπορεί να ανοίξει το deck χωρίς λογαριασμό. Απαιτούνται και τα δύο.",
+  "share.linksUnavailable":
+    "Αυτή η συνεδρία άνοιξε με κωδικό σύνδεσης, οπότε οι αρχικοί σύνδεσμοι δεν είναι διαθέσιμοι σε αυτό το πρόγραμμα περιήγησης. Μοιράσου τον κωδικό και τα PIN παρακάτω.",
   "share.editUrlLabel": "URL συνδέσμου επεξεργασίας",
   "share.viewUrlLabel": "URL συνδέσμου προβολής",
 
@@ -350,6 +402,13 @@ export const el: EnglishDictionary = {
     "Οι εικόνες πρέπει να είναι {maxMb} MB ή μικρότερες.",
   "errors.api.unsupported_image": "Χρησιμοποίησε εικόνα PNG, JPEG ή WebP.",
   "errors.api.invalid_image": "Η εικόνα δεν είναι έγκυρη.",
+  "errors.api.invalid_pin": "Το PIN δεν είναι έγκυρο.",
+  "errors.api.pin_not_required": "Αυτό το deck δεν απαιτεί PIN.",
+  "errors.api.access_not_configured":
+    "Η πρόσβαση deck δεν έχει ρυθμιστεί στον διακομιστή.",
+  "errors.api.pins_not_configured":
+    "Αυτό το deck δεν χρησιμοποιεί πρόσβαση με PIN.",
+  "errors.api.invalid_request": "Το αίτημα δεν ήταν έγκυρο.",
   "errors.api.provider_not_configured":
     "Αυτός ο πάροχος εικόνων δεν έχει ρυθμιστεί.",
   "errors.api.provider_rate_limited":

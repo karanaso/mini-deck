@@ -1,4 +1,5 @@
 import * as Y from "yjs";
+import { eq } from "drizzle-orm";
 
 import { deckDocuments, decks, getDatabase } from "@mini-deck/db";
 import {
@@ -11,6 +12,9 @@ import {
 } from "@mini-deck/deck";
 
 import { apiError, getClientIp, jsonResponse } from "@/server/api";
+import { getDeckSessionSecret } from "@/server/auth";
+import { generateUniqueJoinCode } from "@/server/join-code";
+import { generateDeckPins, hashPin } from "@/server/pins";
 import { getDeckCreateLimiter } from "@/server/rate-limit";
 
 export const runtime = "nodejs";
@@ -28,10 +32,14 @@ export async function POST(request: Request): Promise<Response> {
   const deckId = createDeckId();
   const editToken = await generateEditToken();
   const viewToken = await deriveViewToken(editToken, deckId);
-  const [editTokenHash, viewTokenHash] = await Promise.all([
-    hashToken(editToken),
-    hashToken(viewToken),
-  ]);
+  const { editPin, viewPin } = generateDeckPins();
+  const [editTokenHash, viewTokenHash, editPinHash, viewPinHash] =
+    await Promise.all([
+      hashToken(editToken),
+      hashToken(viewToken),
+      hashPin(editPin),
+      hashPin(viewPin),
+    ]);
 
   const document = createInitialDeckDoc();
   const state = Y.encodeStateAsUpdate(document);
@@ -39,6 +47,26 @@ export async function POST(request: Request): Promise<Response> {
   document.destroy();
 
   const { db } = getDatabase();
+
+  try {
+    getDeckSessionSecret();
+  } catch {
+    return apiError(
+      503,
+      "access_not_configured",
+      "Deck access is not configured. Set DECK_SESSION_SECRET on the server.",
+    );
+  }
+
+  const joinCode = await generateUniqueJoinCode(async (code) => {
+    const rows = await db
+      .select({ id: decks.id })
+      .from(decks)
+      .where(eq(decks.joinCode, code))
+      .limit(1);
+    return rows.length === 0;
+  });
+
   const now = new Date();
   try {
     await db.transaction(async (tx) => {
@@ -47,6 +75,10 @@ export async function POST(request: Request): Promise<Response> {
         title,
         editTokenHash,
         viewTokenHash,
+        joinCode,
+        editPinHash,
+        viewPinHash,
+        pinVersion: 1,
         createdAt: now,
         updatedAt: now,
       });
@@ -68,5 +100,8 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  return jsonResponse({ deckId, editToken, title }, { status: 201 });
+  return jsonResponse(
+    { deckId, editToken, title, joinCode, editPin, viewPin },
+    { status: 201 },
+  );
 }

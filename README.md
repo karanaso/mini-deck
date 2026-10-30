@@ -89,8 +89,21 @@ The Compose file publishes only port `8080`. The web app, collaboration server, 
 | `AUTH_FAILURE_RATE_LIMIT` | Failed token attempts per minute per IP | `60` |
 | `IMAGE_SEARCH_RATE_LIMIT` | Stock image searches per minute per IP | `60` |
 | `IMAGE_IMPORT_RATE_LIMIT` | Stock image imports per minute per IP | `30` |
+| `DECK_SESSION_SECRET` | Signs 30-day unlock sessions; required in production (32+ chars), shared by web and collab | dev fallback |
+| `JOIN_LOOKUP_RATE_LIMIT` | Join-code lookups per 15 minutes per IP | `20` |
+| `JOIN_CODE_ATTEMPT_RATE_LIMIT` | Join-code attempts per 15 minutes per code | `50` |
+| `PIN_ATTEMPT_RATE_LIMIT` | PIN attempts per 15 minutes per IP | `10` |
+| `PIN_DECK_ATTEMPT_RATE_LIMIT` | PIN attempts per 15 minutes per deck | `50` |
 | `UNSPLASH_ACCESS_KEY` | Unsplash Access Key; enables Unsplash search when set | unset |
 | `PEXELS_API_KEY` | Pexels API key; enables Pexels search when set | unset |
+
+## Deck access
+
+New decks receive a seven-digit join code and two six-digit role PINs: one for editing and one for read-only viewing. The creation flow shows all three once and keeps them in that browser. A protected deck can be opened from the landing page by join code or through its edit/view link, but the matching role PIN is required before content loads. Unlocks are remembered for 30 days in that browser.
+
+The share dialog shows the code and PINs on a browser that holds them and lets an editor reset all three values. Resetting invalidates old values and existing unlock sessions. Existing decks keep their link-only behavior and have no join code or PINs.
+
+Set `DECK_SESSION_SECRET` to the same 32+ character value on the web and collaboration services in production. Development uses a dev-only fallback. See `docs/sharing.md`, `docs/api.md`, and `docs/deployment.md` for the flow, routes, and deploy order.
 
 ## Stock image search
 

@@ -9,12 +9,15 @@ import {
   createInitialDeckDoc,
   createSlide,
   createTextElement,
+  createUnlockSessionToken,
   deriveViewToken,
+  DEV_UNLOCK_SESSION_SECRET,
   generateEditToken,
   getDeckData,
   getDeckTitle,
   getOrderedSlideIds,
   hashToken,
+  UNLOCK_SESSION_DURATION_MS,
 } from "@mini-deck/deck";
 
 import { createCollabServer, startCollabServer } from "../src/server.js";
@@ -47,6 +50,50 @@ async function seedDeck(): Promise<SeededDeck> {
   await db.insert(deckDocuments).values({ deckId, state, updatedAt: now });
   document.destroy();
   return { deckId, editToken, viewToken };
+}
+
+async function seedProtectedDeck(): Promise<
+  SeededDeck & { editSession: string; viewSession: string; staleSession: string }
+> {
+  const deckId = createDeckId();
+  const editToken = await generateEditToken();
+  const viewToken = await deriveViewToken(editToken, deckId);
+  const document = createInitialDeckDoc();
+  const state = Y.encodeStateAsUpdate(document);
+  const now = new Date();
+  const { db } = getDatabase();
+  await db.insert(decks).values({
+    id: deckId,
+    title: "Protected deck",
+    editTokenHash: await hashToken(editToken),
+    viewTokenHash: await hashToken(viewToken),
+    editPinHash: "stored-edit-pin-hash",
+    viewPinHash: "stored-view-pin-hash",
+    pinVersion: 1,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await db.insert(deckDocuments).values({ deckId, state, updatedAt: now });
+  document.destroy();
+
+  const exp = Date.now() + UNLOCK_SESSION_DURATION_MS;
+  return {
+    deckId,
+    editToken,
+    viewToken,
+    editSession: await createUnlockSessionToken(
+      { deckId, role: "editor", pinVersion: 1, exp },
+      DEV_UNLOCK_SESSION_SECRET,
+    ),
+    viewSession: await createUnlockSessionToken(
+      { deckId, role: "viewer", pinVersion: 1, exp },
+      DEV_UNLOCK_SESSION_SECRET,
+    ),
+    staleSession: await createUnlockSessionToken(
+      { deckId, role: "editor", pinVersion: 0, exp },
+      DEV_UNLOCK_SESSION_SECRET,
+    ),
+  };
 }
 
 function waitFor<T>(probe: () => T | null | undefined | false, timeout = 5000): Promise<T> {
@@ -170,6 +217,45 @@ describe("collaboration service", () => {
     expect(provider.synced).toBe(false);
     provider.destroy();
     doc.destroy();
+  });
+
+  it("rejects raw link tokens and stale sessions on protected decks", async () => {
+    const seeded = await seedProtectedDeck();
+
+    for (const token of [seeded.editToken, seeded.staleSession]) {
+      const doc = new Y.Doc();
+      const provider = new HocuspocusProvider({
+        url: `ws://127.0.0.1:${port}`,
+        name: seeded.deckId,
+        token,
+        document: doc,
+        WebSocketPolyfill: WebSocket,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      expect(provider.synced).toBe(false);
+      provider.destroy();
+      doc.destroy();
+    }
+  });
+
+  it("accepts unlock sessions and keeps viewers read-only", async () => {
+    const seeded = await seedProtectedDeck();
+    const editorDoc = new Y.Doc();
+    const viewerDoc = new Y.Doc();
+    const editor = await connect(port, seeded.deckId, seeded.editSession, editorDoc);
+    const viewer = await connect(port, seeded.deckId, seeded.viewSession, viewerDoc);
+
+    editorDoc.getMap("meta").set("title", "Protected collaboration");
+    await waitFor(() => getDeckTitle(viewerDoc) === "Protected collaboration");
+
+    viewerDoc.getMap("meta").set("title", "Viewer cannot write");
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(getDeckTitle(editorDoc)).toBe("Protected collaboration");
+
+    editor.destroy();
+    viewer.destroy();
+    editorDoc.destroy();
+    viewerDoc.destroy();
   });
 
   it("enforces read-only viewers while streaming updates to them", async () => {

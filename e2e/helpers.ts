@@ -5,7 +5,17 @@ import {
 } from "@playwright/test";
 import { PDFDocument } from "pdf-lib";
 
+import { getDatabase } from "../packages/db/dist/index.js";
+
 export type InterfaceLocale = "en" | "el";
+
+export interface DeckAccess {
+  joinCode: string;
+  editPin: string;
+  viewPin: string;
+}
+
+const accessByDeck = new Map<string, DeckAccess>();
 
 const testOrigin = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3100";
 const testHost = new URL(testOrigin).hostname;
@@ -33,7 +43,7 @@ export async function switchLanguage(
   await page.getByTestId(`language-option-${locale}`).click();
 }
 
-export interface DeckLink {
+export interface DeckLink extends DeckAccess {
   url: string;
   deckId: string;
   editToken: string;
@@ -41,13 +51,29 @@ export interface DeckLink {
 
 export async function createDeck(page: Page): Promise<DeckLink> {
   await page.goto("/", { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "New deck" }).click();
+  const locale: InterfaceLocale =
+    (await page.locator("html").getAttribute("lang")) === "el" ? "el" : "en";
+  await page.getByRole(
+    "button",
+    { name: locale === "el" ? "Νέο deck" : "New deck" },
+  ).click();
+
+  const dialog = page.getByTestId("deck-created-dialog");
+  await expect(dialog).toBeVisible();
+  const joinCode = (await page.getByTestId("created-join-code").innerText()).trim();
+  const editPin = (await page.getByTestId("created-edit-pin").innerText()).trim();
+  const viewPin = (await page.getByTestId("created-view-pin").innerText()).trim();
+  await page.getByTestId("created-open-editor").click();
+
   await page.waitForURL(/\/d\/[^#]+#/, { timeout: 15_000 });
-  await waitForDeckReady(page, "editor");
   const url = page.url();
   const match = url.match(/\/d\/([^#]+)#(.+)$/);
   if (!match) throw new Error(`Unexpected deck URL: ${url}`);
-  return { url, deckId: match[1], editToken: match[2] };
+  const deckId = match[1];
+  accessByDeck.set(deckId, { joinCode, editPin, viewPin });
+
+  await waitForDeckReady(page, "editor", locale);
+  return { url, deckId, editToken: match[2], joinCode, editPin, viewPin };
 }
 
 export async function waitForDeckReady(
@@ -55,7 +81,30 @@ export async function waitForDeckReady(
   role: "editor" | "viewer" = "editor",
   locale: InterfaceLocale = "en",
 ) {
-  await expect(page.getByTestId("editor-workspace")).toHaveAttribute("data-role", role);
+  const gate = page.getByTestId("pin-gate");
+  const workspace = page.getByTestId("editor-workspace");
+  await page
+    .locator('[data-testid="pin-gate"], [data-testid="editor-workspace"]')
+    .first()
+    .waitFor({ timeout: 15_000 });
+
+  if (await gate.isVisible().catch(() => false)) {
+    const deckId = page.url().match(/\/d\/([^#/?]+)/)?.[1];
+    const access = deckId ? accessByDeck.get(deckId) : undefined;
+    if (!access) throw new Error(`No PIN recorded for deck ${deckId ?? page.url()}`);
+    const input = page.getByTestId("pin-input");
+    const currentPin = await input.inputValue().catch(() => "");
+    if (currentPin.length !== 6) {
+      await input.fill(role === "editor" ? access.editPin : access.viewPin);
+    }
+    const submit = page.getByTestId("pin-submit");
+    if (await submit.isEnabled().catch(() => false)) {
+      await submit.click();
+    }
+    await expect(workspace).toBeVisible({ timeout: 15_000 });
+  }
+
+  await expect(workspace).toHaveAttribute("data-role", role);
   await expect(page.getByTestId("canvas-stage")).toBeVisible();
   await expect(page.getByTestId("connection-badge")).toContainText(
     locale === "el" ? "Ζωντανά" : "Live",
@@ -71,6 +120,25 @@ export async function openDeck(
 ) {
   await page.goto(url, { waitUntil: "networkidle" });
   await waitForDeckReady(page, role, locale);
+}
+
+export async function makeDeckLegacy(deckId: string): Promise<void> {
+  const { client } = getDatabase();
+  await client.unsafe(
+    `UPDATE decks
+     SET join_code = NULL, edit_pin_hash = NULL, view_pin_hash = NULL, pin_version = 0
+     WHERE id = $1`,
+    [deckId],
+  );
+  accessByDeck.delete(deckId);
+}
+
+export async function setDeckJoinCode(deckId: string, joinCode: string): Promise<void> {
+  const { client } = getDatabase();
+  await client.unsafe("UPDATE decks SET join_code = $1 WHERE id = $2", [
+    joinCode,
+    deckId,
+  ]);
 }
 
 export async function getCanvasBox(page: Page) {

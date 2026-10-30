@@ -96,6 +96,10 @@ Glossary:
 | present | παρουσίαση |
 | export | εξαγωγή |
 | image | εικόνα |
+| join code | κωδικός σύνδεσης |
+| PIN | PIN |
+| edit PIN / view PIN | PIN επεξεργασίας / PIN προβολής |
+| reset access | επαναφορά πρόσβασης |
 | stock photo | φωτογραφία αποθετηρίου |
 | image search / import | αναζήτηση / εισαγωγή εικόνας |
 | photographer credit | αναφορά φωτογράφου |

@@ -9,8 +9,7 @@ test("share dialog exposes both links, copies them, and warns about bearer acces
   await page.getByTestId("share-button").click();
   const dialog = page.getByTestId("share-dialog");
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Anyone with a link can access the deck");
-  await expect(dialog).toContainText("cannot be revoked");
+  await expect(dialog).toContainText("A link or join code plus its role PIN");
 
   const editUrl = new URL(await page.getByTestId("edit-link-url").inputValue());
   const viewUrl = new URL(await page.getByTestId("view-link-url").inputValue());
@@ -53,9 +52,15 @@ test("deck links keep tokens out of the initial request and send security header
       });
     }
   });
+  const sessionAuth: string[] = [];
   const sessionRequest = page.waitForRequest((request) =>
     request.url().includes(`/api/decks/${deck.deckId}/session`),
   );
+  page.on("request", (request) => {
+    if (request.url().includes(`/api/decks/${deck.deckId}/session`)) {
+      sessionAuth.push(request.headers()["authorization"] ?? "");
+    }
+  });
 
   const response = await page.goto(editShareUrl, { waitUntil: "networkidle" });
   expect(response).not.toBeNull();
@@ -75,10 +80,13 @@ test("deck links keep tokens out of the initial request and send security header
   for (const url of initialRequests) expect(url).not.toContain(deck.editToken);
   const request = await sessionRequest;
   expect(request.url()).not.toContain(deck.editToken);
-  expect(request.headers()["authorization"]).toBe(`Bearer ${deck.editToken}`);
+  expect(request.headers()["authorization"]).toMatch(/^Bearer /);
 
   await waitForDeckReady(page);
   await expect(page.getByTestId("canvas-stage")).toBeVisible();
+  await expect
+    .poll(() => sessionAuth.some((value) => value.startsWith("Bearer v1.")))
+    .toBe(true);
 });
 
 test("tampered and unknown links show the same generic not-found state", async ({ page }) => {

@@ -22,9 +22,14 @@ No body or authentication is required. Rate limited per IP.
 {
   "deckId": "pfwqFFrwLL3sfRpWlOUD0",
   "editToken": "…",
-  "title": "Untitled deck"
+  "title": "Untitled deck",
+  "joinCode": "0042719",
+  "editPin": "004271",
+  "viewPin": "837204"
 }
 ```
+
+`joinCode`, `editPin`, and `viewPin` are returned only by this creation response. Only salted PIN hashes are stored. Existing decks created before PIN support have no join code or PINs and remain link-only.
 
 The view token is derived locally from the edit token:
 
@@ -45,7 +50,91 @@ Returns the role and current title. Edit and view tokens resolve to different ro
 { "role": "editor", "title": "Untitled deck" }
 ```
 
+For a PIN-protected deck without a valid unlock session, the link token returns:
+
+```json
+{ "requiresPin": true, "role": "editor" }
+```
+
+Send the unlock session token as the Bearer credential after unlocking. A raw link token does not authorize protected deck APIs, uploads, image search, or collaboration.
+
 `role` is `editor` or `viewer`.
+
+## Unlock a link
+
+```http
+POST /api/decks/{deckId}/unlock
+Authorization: Bearer {editToken|viewToken}
+Content-Type: application/json
+```
+
+```json
+{ "pin": "004271" }
+```
+
+Returns a 30-day unlock session:
+
+```json
+{
+  "deckId": "pfwqFFrwLL3sfRpWlOUD0",
+  "role": "editor",
+  "title": "Untitled deck",
+  "unlockToken": "v1.…",
+  "expiresAt": 1790000000000
+}
+```
+
+A wrong PIN returns `401 invalid_pin`; repeated attempts return `429 rate_limited`. A view link only accepts the view PIN.
+
+## Join by code
+
+```http
+POST /api/join/lookup
+Content-Type: application/json
+```
+
+```json
+{ "code": "0042719" }
+```
+
+A valid code returns the deck ID and title. An unknown code returns the generic `404`. Lookup is rate-limited per client and per code.
+
+```json
+{ "deckId": "pfwqFFrwLL3sfRpWlOUD0", "title": "Untitled deck" }
+```
+
+```http
+POST /api/join/unlock
+Content-Type: application/json
+```
+
+```json
+{ "code": "0042719", "role": "viewer", "pin": "837204" }
+```
+
+Returns the same unlock payload as the link unlock route. No deck content is available before this succeeds.
+
+## Reset deck access
+
+```http
+POST /api/decks/{deckId}/access/reset
+Authorization: Bearer {editorUnlockToken}
+```
+
+Requires an edit unlock session. Generates and returns a new join code and two PINs, increments the deck's PIN version, and returns a fresh edit unlock session. Old codes, PINs, and unlock sessions stop working immediately.
+
+```json
+{
+  "deckId": "pfwqFFrwLL3sfRpWlOUD0",
+  "title": "Untitled deck",
+  "role": "editor",
+  "joinCode": "7723104",
+  "editPin": "551028",
+  "viewPin": "309442",
+  "unlockToken": "v1.…",
+  "expiresAt": 1790000000000
+}
+```
 
 ## Upload an image
 

@@ -27,6 +27,19 @@ test("loads a 30-slide, 500-element deck within the performance budget", async (
   const created = (await createdResponse.json()) as {
     deckId: string;
     editToken: string;
+    editPin: string;
+  };
+
+  const unlockedResponse = await request.post(
+    `/api/decks/${created.deckId}/unlock`,
+    {
+      headers: { authorization: `Bearer ${created.editToken}` },
+      data: { pin: created.editPin },
+    },
+  );
+  expect(unlockedResponse.status()).toBe(200);
+  const { unlockToken } = (await unlockedResponse.json()) as {
+    unlockToken: string;
   };
 
   const doc = new Y.Doc();
@@ -36,7 +49,7 @@ test("loads a 30-slide, 500-element deck within the performance budget", async (
     provider = new HocuspocusProvider({
       url: "ws://localhost:1234",
       name: created.deckId,
-      token: created.editToken,
+      token: unlockToken,
       document: doc,
       WebSocketPolyfill: WebSocket,
       onSynced: ({ state }) => {
@@ -138,6 +151,8 @@ test("loads a 30-slide, 500-element deck within the performance budget", async (
   const url = `/d/${created.deckId}#${created.editToken}`;
   const initialStarted = Date.now();
   await page.goto(url, { waitUntil: "domcontentloaded" });
+  await page.getByTestId("pin-input").fill(created.editPin);
+  await page.getByTestId("pin-submit").click();
   await expect(page.getByTestId("canvas-stage")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("connection-badge")).toContainText("Live", {
     timeout: 20_000,

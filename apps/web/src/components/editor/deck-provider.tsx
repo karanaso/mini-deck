@@ -35,6 +35,8 @@ type ConnectionStatus = "connecting" | "connected" | "disconnected";
 interface DeckContextValue {
   deckId: string;
   token: string;
+  linkToken: string | null;
+  accessProtected: boolean;
   role: Role;
   doc: Y.Doc;
   provider: HocuspocusProvider | null;
@@ -60,11 +62,15 @@ export function useDeckContext(): DeckContextValue {
 export function DeckProvider({
   deckId,
   token,
+  linkToken,
+  accessProtected,
   role,
   children,
 }: {
   deckId: string;
   token: string;
+  linkToken: string | null;
+  accessProtected: boolean;
   role: Role;
   children: React.ReactNode;
 }) {
@@ -208,6 +214,8 @@ export function DeckProvider({
     () => ({
       deckId,
       token,
+      linkToken,
+      accessProtected,
       role,
       doc,
       provider,
@@ -224,6 +232,8 @@ export function DeckProvider({
     [
       deckId,
       token,
+      linkToken,
+      accessProtected,
       role,
       doc,
       provider,

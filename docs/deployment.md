@@ -36,12 +36,30 @@ The collaboration service must be a single long-lived instance in v1. Do not dep
 | `AUTH_FAILURE_RATE_LIMIT` | no | Per-IP failed token attempts/minute |
 | `IMAGE_SEARCH_RATE_LIMIT` | no | Per-IP stock image searches/minute (default 60) |
 | `IMAGE_IMPORT_RATE_LIMIT` | no | Per-IP stock image imports/minute (default 30) |
+| `DECK_SESSION_SECRET` | yes in production | 32+ character signing key for 30-day unlock sessions; identical on web and collab |
+| `JOIN_LOOKUP_RATE_LIMIT` | no | Join-code lookups per 15 minutes per IP (default 20) |
+| `JOIN_CODE_ATTEMPT_RATE_LIMIT` | no | Join-code attempts per 15 minutes per code (default 50) |
+| `PIN_ATTEMPT_RATE_LIMIT` | no | PIN attempts per 15 minutes per IP (default 10) |
+| `PIN_DECK_ATTEMPT_RATE_LIMIT` | no | PIN attempts per 15 minutes per deck (default 50) |
 | `UNSPLASH_ACCESS_KEY` | no | Enables Unsplash search; keep it server-side only |
 | `PEXELS_API_KEY` | no | Enables Pexels search; keep it server-side only |
 
 Because `NEXT_PUBLIC_COLLAB_WS_URL` is embedded in the browser bundle, rebuild the web image when it changes. The web proxy CSP also reads it at runtime, so keep the runtime value aligned.
 
-## Stock image providers
+## Deck access
+
+New decks receive a seven-digit join code and two six-digit role PINs. Role PINs are stored as salted scrypt hashes; the join code is stored as a non-secret lookup value and reveals only the deck title before a PIN is entered. Successful unlocks are signed 30-day sessions, so `DECK_SESSION_SECRET` must be identical on the web and collaboration services. Development uses a documented dev-only fallback, but production issuance fails closed when the secret is missing or shorter than 32 characters.
+
+Apply the PIN migration before deploying the new web build, then deploy the collaboration server before the web server:
+
+1. Apply the database migration.
+2. Set `DECK_SESSION_SECRET` on both services.
+3. Deploy `apps/collab` first; it accepts legacy link tokens and the new unlock sessions.
+4. Deploy `apps/web`; new decks start receiving access values.
+
+Do not roll the web service back while PIN-protected decks exist: the previous build does not enforce PINs and would treat link tokens as sufficient. Take the app offline or keep the new web build if rollback is required. Existing link-only decks are unaffected. Join and PIN limits are process-local, like the existing rate limiters; a multi-instance deployment needs a shared limiter.
+
+### Stock image providers
 
 Stock image search is optional. Set `UNSPLASH_ACCESS_KEY` and/or `PEXELS_API_KEY` on the web service to enable that provider; leaving a key unset or empty hides the provider. Keys are used only by server routes and are never included in client bundles or responses.
 

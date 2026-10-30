@@ -35,9 +35,7 @@ test("copies and pastes elements within a slide, across slides, and across decks
   await expect.poll(() => elementCount(page)).toBe(1);
 
   // Cross-deck paste through the system clipboard.
-  await page.goto("/", { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "New deck" }).click();
-  await page.waitForSelector('[data-testid="canvas-stage"]');
+  await createDeck(page);
   const box = await getCanvasBox(page);
   await page.mouse.click(box.x + 500, box.y + 300);
   await page.keyboard.press("Control+v");

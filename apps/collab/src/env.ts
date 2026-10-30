@@ -14,6 +14,7 @@ const envSchema = z.object({
   COLLAB_MAX_DEBOUNCE_MS: z.coerce.number().int().min(0).default(10_000),
   COLLAB_MAX_PAYLOAD_BYTES: z.coerce.number().int().min(1024).default(5 * 1024 * 1024),
   COLLAB_MAX_DOCUMENTS_PER_CONNECTION: z.coerce.number().int().min(1).default(10),
+  DECK_SESSION_SECRET: z.string().trim().default(""),
   PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
   STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   STORAGE_DIR: z.string().default(resolve(process.cwd(), ".data/assets")),
