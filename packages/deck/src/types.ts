@@ -18,6 +18,37 @@ export const SHAPE_KINDS = [
   "star",
 ] as const;
 
+export const SLIDE_TRANSITIONS = ["none", "fade", "push", "zoom"] as const;
+
+export type SlideTransition = (typeof SLIDE_TRANSITIONS)[number];
+
+export function isSlideTransition(value: unknown): value is SlideTransition {
+  return (
+    typeof value === "string" &&
+    (SLIDE_TRANSITIONS as readonly string[]).includes(value)
+  );
+}
+
+export const IMAGE_CREDIT_PROVIDERS = ["unsplash", "pexels"] as const;
+
+export type ImageCreditProvider = (typeof IMAGE_CREDIT_PROVIDERS)[number];
+
+export interface ImageCredit {
+  provider: ImageCreditProvider;
+  photographerName: string;
+  photographerUrl: string;
+  sourceUrl: string;
+}
+
+export function isImageCreditProvider(
+  value: unknown,
+): value is ImageCreditProvider {
+  return (
+    typeof value === "string" &&
+    (IMAGE_CREDIT_PROVIDERS as readonly string[]).includes(value)
+  );
+}
+
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 export type ElementType =
   | "text"
@@ -81,6 +112,7 @@ export interface ArrowElementData extends BaseElementData {
 export interface ImageElementData extends BaseElementData {
   type: "image";
   assetId: string;
+  credit?: ImageCredit;
 }
 
 export interface ShapeElementData extends BaseElementData {
@@ -111,6 +143,7 @@ export type ElementData =
 export interface SlideData {
   id: string;
   background: string;
+  transition: SlideTransition;
   elements: ElementData[];
 }
 
@@ -205,11 +238,21 @@ export const arrowElementSchema = z
   })
   .strict();
 
+export const imageCreditSchema = z
+  .object({
+    provider: z.enum(IMAGE_CREDIT_PROVIDERS),
+    photographerName: z.string().trim().min(1).max(200),
+    photographerUrl: z.string().min(1).max(2048),
+    sourceUrl: z.string().min(1).max(2048),
+  })
+  .strict();
+
 export const imageElementSchema = z
   .object({
     ...baseElementShape,
     type: z.literal("image"),
     assetId: z.string().min(8).max(128),
+    credit: imageCreditSchema.optional(),
   })
   .strict();
 

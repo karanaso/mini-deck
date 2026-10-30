@@ -34,8 +34,22 @@ The collaboration service must be a single long-lived instance in v1. Do not dep
 | `S3_FORCE_PATH_STYLE` | no | `true` for MinIO, usually `false` for AWS |
 | `DECK_CREATE_RATE_LIMIT` | no | Per-IP creations/minute |
 | `AUTH_FAILURE_RATE_LIMIT` | no | Per-IP failed token attempts/minute |
+| `IMAGE_SEARCH_RATE_LIMIT` | no | Per-IP stock image searches/minute (default 60) |
+| `IMAGE_IMPORT_RATE_LIMIT` | no | Per-IP stock image imports/minute (default 30) |
+| `UNSPLASH_ACCESS_KEY` | no | Enables Unsplash search; keep it server-side only |
+| `PEXELS_API_KEY` | no | Enables Pexels search; keep it server-side only |
 
 Because `NEXT_PUBLIC_COLLAB_WS_URL` is embedded in the browser bundle, rebuild the web image when it changes. The web proxy CSP also reads it at runtime, so keep the runtime value aligned.
+
+## Stock image providers
+
+Stock image search is optional. Set `UNSPLASH_ACCESS_KEY` and/or `PEXELS_API_KEY` on the web service to enable that provider; leaving a key unset or empty hides the provider. Keys are used only by server routes and are never included in client bundles or responses.
+
+The browser loads result thumbnails directly from the provider CDNs (`images.unsplash.com`, `plus.unsplash.com`, `images.pexels.com`), which the app's `img-src` policy allows. Importing a photo downloads it through the server, re-encodes it with the upload pipeline, and stores it in the deck's asset bucket. Provider URLs are never stored in the deck.
+
+Search pages are cached in memory for 60 seconds per process, and search/import requests are rate limited per IP. These limits are process-local, like the existing deck-creation limiter; a multi-instance deployment needs a shared limiter. Search and import require an editor token.
+
+Attribution is shown in the search dialog and retained on the image element. Operators are responsible for provider terms, API quotas, and attribution requirements. Unsplash imports call the provider's download-tracking endpoint. Disabling a provider later does not affect photos already imported into decks.
 
 ## Database
 

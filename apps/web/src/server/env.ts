@@ -25,7 +25,11 @@ const envSchema = z.object({
     .transform((value) => value === "true"),
   DECK_CREATE_RATE_LIMIT: z.coerce.number().int().min(1).default(100),
   AUTH_FAILURE_RATE_LIMIT: z.coerce.number().int().min(1).default(60),
+  IMAGE_SEARCH_RATE_LIMIT: z.coerce.number().int().min(1).default(60),
+  IMAGE_IMPORT_RATE_LIMIT: z.coerce.number().int().min(1).default(30),
   MAX_IMAGE_BYTES: z.coerce.number().int().min(1).default(10 * 1024 * 1024),
+  UNSPLASH_ACCESS_KEY: z.string().trim().default(""),
+  PEXELS_API_KEY: z.string().trim().default(""),
 });
 
 export type ServerEnv = z.infer<typeof envSchema>;

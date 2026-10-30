@@ -87,6 +87,18 @@ The Compose file publishes only port `8080`. The web app, collaboration server, 
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | S3-compatible storage | MinIO defaults |
 | `DECK_CREATE_RATE_LIMIT` | Deck creations per minute per IP | `100` |
 | `AUTH_FAILURE_RATE_LIMIT` | Failed token attempts per minute per IP | `60` |
+| `IMAGE_SEARCH_RATE_LIMIT` | Stock image searches per minute per IP | `60` |
+| `IMAGE_IMPORT_RATE_LIMIT` | Stock image imports per minute per IP | `30` |
+| `UNSPLASH_ACCESS_KEY` | Unsplash Access Key; enables Unsplash search when set | unset |
+| `PEXELS_API_KEY` | Pexels API key; enables Pexels search when set | unset |
+
+## Stock image search
+
+Editors can search Unsplash and Pexels from the image menu. A provider is available only when its key is set in the server environment; no key is sent to the browser. Searches are proxied through the app, and importing a photo downloads it once, re-encodes it with the same pipeline as an upload, and stores it as a deck asset. The deck never depends on the provider URL, so imported photos keep working if the provider removes them.
+
+Search results show the photographer and provider, and imported images retain that credit in the deck. Operators are responsible for complying with each provider's terms and attribution guidelines. Unsplash imports also trigger the provider's download-tracking endpoint.
+
+Without provider keys, stock image search is hidden and uploads, pastes, collaboration, presentation, and export are unchanged. No database or deck migration is required. See `docs/deployment.md` and `docs/api.md` for the route and configuration details.
 
 ## Commands
 

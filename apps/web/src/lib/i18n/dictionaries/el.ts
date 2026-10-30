@@ -248,6 +248,38 @@ export const el: EnglishDictionary = {
   "editor.displayNameUpdated": "Το όνομα εμφάνισης ενημερώθηκε",
   "editor.imageAdded": "Η εικόνα προστέθηκε",
   "editor.imageAddError": "Δεν ήταν δυνατή η προσθήκη της εικόνας",
+
+  // Image search
+  "editor.image.menu": "Εικόνα",
+  "editor.image.upload": "Μεταφόρτωση εικόνας",
+  "editor.image.search": "Αναζήτηση φωτογραφιών",
+  "editor.image.dialogTitle": "Αναζήτηση φωτογραφιών",
+  "editor.image.dialogDescription":
+    "Βρες μια φωτογραφία από έναν ρυθμισμένο πάροχο. Οι εισαγόμενες φωτογραφίες αποθηκεύονται με αυτό το deck.",
+  "editor.image.queryLabel": "Αναζήτηση φωτογραφιών",
+  "editor.image.queryPlaceholder": "Βουνά, γραφείο, φαγητό…",
+  "editor.image.searchAction": "Αναζήτηση",
+  "editor.image.searching": "Αναζήτηση…",
+  "editor.image.providerLabel": "Πάροχος",
+  "editor.image.orientationLabel": "Προσανατολισμός",
+  "editor.image.orientation.landscape": "Οριζόντια",
+  "editor.image.orientation.portrait": "Κατακόρυφη",
+  "editor.image.orientation.all": "Όλες",
+  "editor.image.loadMore": "Φόρτωση περισσότερων",
+  "editor.image.loadingMore": "Φόρτωση…",
+  "editor.image.endOfResults": "Έφτασες στο τέλος των αποτελεσμάτων.",
+  "editor.image.empty": "Δεν βρέθηκαν φωτογραφίες για «{query}».",
+  "editor.image.emptyHint": "Δοκίμασε άλλον όρο ή προσανατολισμό.",
+  "editor.image.noProviders": "Δεν έχουν ρυθμιστεί πάροχοι φωτογραφιών.",
+  "editor.image.importing": "Προσθήκη φωτογραφίας…",
+  "editor.image.imported": "Η φωτογραφία προστέθηκε",
+  "editor.image.importError":
+    "Δεν ήταν δυνατή η προσθήκη αυτής της φωτογραφίας",
+  "editor.image.credit": "Φωτογραφία από {name} στο {provider}",
+  "editor.image.creditLink": "Άνοιγμα του {name} στο {provider}",
+  "editor.image.alt": "Φωτογραφία από {name}",
+  "editor.image.provider.unsplash": "Unsplash",
+  "editor.image.provider.pexels": "Pexels",
   "editor.elementAddError": "Δεν ήταν δυνατή η προσθήκη του στοιχείου",
   "editor.textAddError": "Δεν ήταν δυνατή η προσθήκη του κειμένου",
   "editor.cut": "Αποκόπηκε",
@@ -293,6 +325,16 @@ export const el: EnglishDictionary = {
   "presentation.help":
     "Χρησιμοποίησε τα βέλη ή το Space για πλοήγηση · Esc για έξοδο",
 
+  // Slide transitions
+  "editor.transition.label": "Μετάβαση",
+  "editor.transition.tooltip":
+    "Επίλεξε πώς εμφανίζεται αυτή η διαφάνεια στην παρουσίαση",
+  "editor.transition.none": "Καμία",
+  "editor.transition.fade": "Σβήσιμο",
+  "editor.transition.push": "Ώθηση",
+  "editor.transition.zoom": "Ζουμ",
+  "editor.transition.current": "Μετάβαση διαφάνειας: {transition}",
+
   // API and operation errors
   "errors.api.generic": "Κάτι πήγε στραβά. Δοκίμασε ξανά.",
   "errors.api.network":
@@ -308,6 +350,14 @@ export const el: EnglishDictionary = {
     "Οι εικόνες πρέπει να είναι {maxMb} MB ή μικρότερες.",
   "errors.api.unsupported_image": "Χρησιμοποίησε εικόνα PNG, JPEG ή WebP.",
   "errors.api.invalid_image": "Η εικόνα δεν είναι έγκυρη.",
+  "errors.api.provider_not_configured":
+    "Αυτός ο πάροχος εικόνων δεν έχει ρυθμιστεί.",
+  "errors.api.provider_rate_limited":
+    "Ο πάροχος εικόνων είναι πολυάσχολος. Δοκίμασε ξανά σύντομα.",
+  "errors.api.provider_unavailable":
+    "Ο πάροχος εικόνων δεν είναι διαθέσιμος.",
+  "errors.api.provider_not_found":
+    "Αυτή η φωτογραφία δεν είναι πλέον διαθέσιμη.",
   "errors.createDeck": "Δεν ήταν δυνατή η δημιουργία deck.",
   "errors.openDeck": "Δεν ήταν δυνατό το άνοιγμα αυτού του deck.",
   "errors.uploadImage": "Δεν ήταν δυνατή η μεταφόρτωση της εικόνας.",

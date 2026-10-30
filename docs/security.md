@@ -35,6 +35,15 @@ Scope: capability links, HTTP APIs, WebSocket collaboration, asset handling, cli
 - Asset IDs are 128-bit capabilities; delivery is `nosniff`, inline, and immutable.
 - Object keys are generated server-side; uploaded filenames never reach storage paths.
 
+### Stock image imports
+
+- Provider API keys exist only in server environment variables and never appear in client bundles or responses.
+- Search and import require an editor token; view-only links receive `403`.
+- Import accepts only a provider identifier, never a client-supplied image URL. The server re-fetches metadata and the image itself.
+- Image downloads must use HTTPS and an approved provider host, with redirects disabled, a timeout, and the same byte cap as uploads. Provider images pass through the same `sharp` re-encoding pipeline.
+- Search pages are cached briefly and both search and import are rate limited per IP.
+- Result thumbnails load from the provider CDNs, so the CSP allows only `images.unsplash.com`, `plus.unsplash.com`, and `images.pexels.com` in `img-src`. No provider script is loaded.
+
 ### Input handling
 
 - Clipboard envelopes are strict zod schemas with element, byte, and text caps. Unknown fields fail closed.
@@ -46,7 +55,7 @@ Scope: capability links, HTTP APIs, WebSocket collaboration, asset handling, cli
 
 ### Abuse resistance
 
-- In-memory token buckets limit deck creation and failed token attempts per IP.
+- In-memory token buckets limit deck creation, failed token attempts, stock image search, and stock image import per IP.
 - Image processing and WebSocket payloads are size-limited.
 - SQL is parameterized through Drizzle.
 - Logs redact tokens and contain deck ID, role, socket ID, and outcome only.

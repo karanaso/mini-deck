@@ -9,12 +9,13 @@ import {
   Share2,
 } from "lucide-react";
 
-import { MAX_TITLE_LENGTH, setDeckTitle } from "@mini-deck/deck";
+import { MAX_TITLE_LENGTH, setDeckTitle, setSlideTransition } from "@mini-deck/deck";
 
 import { useDeckContext } from "@/components/editor/deck-provider";
 import { ExportMenu } from "@/components/editor/export-menu";
 import { ParticipantDialog } from "@/components/editor/participant-dialog";
 import { ShareDialog } from "@/components/editor/share-dialog";
+import { SlideTransitionMenu } from "@/components/editor/slide-transition-menu";
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { useI18n } from "@/components/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAwarenessStates, uniqueParticipants } from "@/hooks/use-awareness";
-import { useDeckTitle } from "@/hooks/use-deck";
+import { useDeckTitle, useSlideData } from "@/hooks/use-deck";
 import { initials } from "@/lib/participant";
 import { updateRecentTitle } from "@/lib/recents";
 import { cn } from "@/lib/utils";
@@ -56,9 +57,11 @@ export function TopBar() {
     shareOpen,
     setShareOpen,
     setPresentationOpen,
+    currentSlideId,
   } = useEditorStore();
 
   const title = useDeckTitle(doc);
+  const slide = useSlideData(doc, currentSlideId);
   const awareness = useAwarenessStates(provider);
   const [draft, setDraft] = useState(title);
   const [focused, setFocused] = useState(false);
@@ -219,6 +222,16 @@ export function TopBar() {
             <Share2 className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{t("common.share")}</span>
           </Button>
+        ) : null}
+
+        {role === "editor" && currentSlideId ? (
+          <SlideTransitionMenu
+            value={slide?.transition ?? "none"}
+            onValueChange={(transition) => {
+              setSlideTransition(doc, currentSlideId, transition);
+              undoManager.stopCapturing();
+            }}
+          />
         ) : null}
 
         <Button

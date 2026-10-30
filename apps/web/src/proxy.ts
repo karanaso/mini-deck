@@ -27,7 +27,7 @@ function applyResponseHeaders(response: NextResponse, path: string): NextRespons
     connectSrc,
     `script-src ${scriptSources}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://images.unsplash.com https://plus.unsplash.com https://images.pexels.com",
     "font-src 'self' data:",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",

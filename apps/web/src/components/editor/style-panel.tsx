@@ -26,6 +26,7 @@ import {
 } from "@mini-deck/deck";
 
 import { useDeckContext } from "@/components/editor/deck-provider";
+import { ImageCreditLine } from "@/components/editor/image-credit";
 import { useI18n } from "@/components/i18n/locale-provider";
 import { useSlideData } from "@/hooks/use-deck";
 import { messageForError } from "@/lib/api-error";
@@ -126,6 +127,9 @@ export function StylePanel({ slideId }: { slideId: string }) {
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           {single ? (
             <div className="space-y-5">
+              <ImageCreditLine
+                credit={single.type === "image" ? single.credit : undefined}
+              />
               {hasFill(single) && (
                 <ColorControl
                   label={

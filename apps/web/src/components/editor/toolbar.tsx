@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import {
   Circle,
-  ImagePlus,
   MousePointer2,
   MoveUpRight,
   Redo2,
@@ -13,19 +12,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  addElement,
-  createElementId,
-  SLIDE_HEIGHT,
-  SLIDE_WIDTH,
-} from "@mini-deck/deck";
-
 import { useDeckContext } from "@/components/editor/deck-provider";
 import { EmojiMenu } from "@/components/editor/emoji-menu";
+import { ImageMenu } from "@/components/editor/image-menu";
 import { ShapeMenu } from "@/components/editor/shape-menu";
 import { ToolButton } from "@/components/editor/tool-button";
 import { useI18n } from "@/components/i18n/locale-provider";
 import { messageForError } from "@/lib/api-error";
+import { placeImageAsset } from "@/lib/insert-image";
+import type { ImportStockImageResult } from "@/lib/stock-image-client";
 import { maxImageMb, uploadImage, validateImageFile } from "@/lib/upload";
 import { useEditorStore, type EditorTool } from "@/store/editor-store";
 
@@ -73,29 +68,37 @@ export function Toolbar({ slideId }: { slideId: string }) {
     setUploading(true);
     try {
       const asset = await uploadImage(deckId, token, file);
-      const width = Math.min(1200, Math.max(180, asset.width));
-      const height = Math.max(80, (asset.height / asset.width) * width);
-      const elementId = createElementId();
-      addElement(doc, slideId, {
-        id: elementId,
-        type: "image",
-        x: (SLIDE_WIDTH - width) / 2,
-        y: (SLIDE_HEIGHT - height) / 2,
-        width,
-        height,
-        rotation: 0,
-        opacity: 1,
-        assetId: asset.id,
+      placeImageAsset({
+        doc,
+        slideId,
+        asset,
+        selectOnly,
+        undoManager,
       });
-      selectOnly(elementId);
       setTool("select");
-      undoManager.stopCapturing();
       toast.success(t("editor.imageAdded"));
     } catch (error) {
       const message = messageForError(error, "editor.imageAddError");
       toast.error(t(message.key, message.params));
     } finally {
       setUploading(false);
+    }
+  }
+
+  function onStockImageSelected({ asset, credit }: ImportStockImageResult) {
+    try {
+      placeImageAsset({
+        doc,
+        slideId,
+        asset,
+        credit,
+        selectOnly,
+        undoManager,
+      });
+      setTool("select");
+    } catch (error) {
+      const message = messageForError(error, "editor.imageAddError");
+      toast.error(t(message.key, message.params));
     }
   }
 
@@ -116,18 +119,13 @@ export function Toolbar({ slideId }: { slideId: string }) {
         <ShapeMenu tool={tool} onSelect={setTool} />
         <EmojiMenu slideId={slideId} />
         <span className="mx-1 h-6 w-px bg-slate-200" />
-        <ToolButton
-          label={t("editor.tools.addImage")}
-          onClick={() => fileInput.current?.click()}
-          disabled={uploading}
-          testId="tool-image"
-        >
-          {uploading ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
-          ) : (
-            <ImagePlus className="h-4 w-4" />
-          )}
-        </ToolButton>
+        <ImageMenu
+          deckId={deckId}
+          token={token}
+          uploading={uploading}
+          onUpload={() => fileInput.current?.click()}
+          onSelect={onStockImageSelected}
+        />
         <span className="mx-1 h-6 w-px bg-slate-200" />
         <ToolButton
           label={t("editor.tools.undo")}

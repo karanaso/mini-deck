@@ -22,8 +22,10 @@ import {
 import { createElementId } from "./tokens.js";
 import {
   elementDataSchema,
+  isSlideTransition,
   type ElementData,
   type SlideData,
+  type SlideTransition,
   type TextElementData,
 } from "./types.js";
 
@@ -101,6 +103,7 @@ export function duplicateSlide(doc: Y.Doc, slideId: string): string {
     }
     const newSlide = createSlideMap(newSlideId);
     newSlide.set("background", source.background);
+    newSlide.set("transition", source.transition);
     const elements = getSlideElements(newSlide);
     const elementOrder = getElementOrder(newSlide);
     for (const element of source.elements) {
@@ -137,6 +140,19 @@ export function reorderSlide(doc: Y.Doc, slideId: string, toIndex: number): void
     if (fromIndex === clamped) return;
     order.delete(fromIndex, 1);
     order.insert(clamped, [slideId]);
+  });
+}
+
+export function setSlideTransition(
+  doc: Y.Doc,
+  slideId: string,
+  transition: SlideTransition,
+): void {
+  if (!isSlideTransition(transition)) {
+    throw new Error(`Invalid slide transition: ${String(transition)}`);
+  }
+  withLocalTransaction(doc, () => {
+    requireSlide(doc, slideId).set("transition", transition);
   });
 }
 
@@ -480,6 +496,7 @@ export function createElementMap(data: ElementData): ElementMap {
       break;
     case "image":
       element.set("assetId", data.assetId);
+      if (data.credit) element.set("credit", structuredClone(data.credit));
       break;
     case "shape":
       element.set("shape", data.shape);
@@ -501,6 +518,7 @@ export function createElementMap(data: ElementData): ElementMap {
 export function createSlideDataMap(data: SlideData): SlideMap {
   const slide = createSlideMap(data.id);
   slide.set("background", data.background);
+  slide.set("transition", isSlideTransition(data.transition) ? data.transition : "none");
   const elements = getSlideElements(slide);
   const order = getElementOrder(slide);
   for (const element of data.elements) {

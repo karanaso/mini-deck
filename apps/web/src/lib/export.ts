@@ -66,6 +66,17 @@ export async function exportDeckPdf(
   slides: readonly SlideData[],
   onProgress?: (completed: number, total: number) => void,
 ): Promise<void> {
+  const bytes = await buildDeckPdf(slides, onProgress);
+  downloadBlob(
+    new Blob([bytes as BlobPart], { type: "application/pdf" }),
+    `${sanitizeFilename(deckTitle)}.pdf`,
+  );
+}
+
+export async function buildDeckPdf(
+  slides: readonly SlideData[],
+  onProgress?: (completed: number, total: number) => void,
+): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const pageWidth = 960;
   const pageHeight = 540;
@@ -83,9 +94,5 @@ export async function exportDeckPdf(
   }
 
   onProgress?.(slides.length, slides.length);
-  const bytes = await pdf.save();
-  downloadBlob(
-    new Blob([bytes as BlobPart], { type: "application/pdf" }),
-    `${sanitizeFilename(deckTitle)}.pdf`,
-  );
+  return pdf.save();
 }

@@ -4,6 +4,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Next.js only reads .env from its own package directory. The project keeps a
+# single .env at the repository root, so load it here for both dev processes.
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env
+  set +a
+fi
+
 # Start PGlite if needed and apply migrations. Leaves the database running.
 bash scripts/db-migrate.sh
 

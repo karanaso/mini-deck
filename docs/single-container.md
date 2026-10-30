@@ -74,6 +74,10 @@ The image has working defaults. Most installations only need to choose a host po
 | `PUBLIC_APP_URL` | `http://localhost:8080` | Optional; currently unused by runtime code |
 | `COLLAB_DEBOUNCE_MS` / `COLLAB_MAX_DEBOUNCE_MS` | `2000` / `10000` | Document persistence timing |
 | `DECK_CREATE_RATE_LIMIT` / `AUTH_FAILURE_RATE_LIMIT` | `100` / `60` | Per-IP requests per minute |
+| `IMAGE_SEARCH_RATE_LIMIT` / `IMAGE_IMPORT_RATE_LIMIT` | `60` / `30` | Per-IP stock image searches and imports per minute |
+| `UNSPLASH_ACCESS_KEY` / `PEXELS_API_KEY` | unset | Optional stock image providers; keep keys server-side |
+
+Stock image search is optional in this mode. Add the provider keys to the container environment and restart to enable search. Imported photos are stored under `STORAGE_DIR` like uploaded images, so no extra volume or migration is required.
 
 Do not set `DATABASE_URL` to an external PostgreSQL server for this mode. The single-container image expects its embedded database.
 

@@ -1,26 +1,17 @@
-import sharp from "sharp";
-
-import { deckAssets, getDatabase } from "@mini-deck/db";
-import {
-  MAX_IMAGE_BYTES,
-  MAX_IMAGE_DIMENSION,
-  createAssetId,
-} from "@mini-deck/deck";
+import { MAX_IMAGE_BYTES } from "@mini-deck/deck";
 
 import { apiError, getBearerToken, getClientIp, jsonResponse } from "@/server/api";
 import { authorizeDeck } from "@/server/auth";
 import { getServerEnv } from "@/server/env";
+import {
+  ImageValidationError,
+  persistDeckImage,
+  processDeckImage,
+} from "@/server/images";
 import { getAuthFailureLimiter } from "@/server/rate-limit";
-import { getAssetStorage } from "@/server/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const SUPPORTED_TYPES = new Map([
-  ["image/png", { extension: "png", format: "png" as const }],
-  ["image/jpeg", { extension: "jpg", format: "jpeg" as const }],
-  ["image/webp", { extension: "webp", format: "webp" as const }],
-]);
 
 export async function POST(
   request: Request,
@@ -54,78 +45,25 @@ export async function POST(
 
   const env = getServerEnv();
   const maxBytes = Math.min(MAX_IMAGE_BYTES, env.MAX_IMAGE_BYTES);
-  if (file.size > maxBytes) {
-    const maxMb = Math.floor(maxBytes / (1024 * 1024));
-    return apiError(
-      413,
-      "image_too_large",
-      `Images must be ${maxMb} MB or smaller`,
-      { details: { maxMb } },
-    );
-  }
-
-  const type = SUPPORTED_TYPES.get(file.type);
-  if (!type) {
-    return apiError(415, "unsupported_image", "Use a PNG, JPEG, or WebP image");
-  }
-
-  const input = new Uint8Array(await file.arrayBuffer());
-  let output: Buffer;
-  let width: number;
-  let height: number;
+  let image;
   try {
-    const pipeline = sharp(input, {
-      limitInputPixels: MAX_IMAGE_DIMENSION * MAX_IMAGE_DIMENSION,
-      failOn: "error",
-    })
-      .rotate()
-      .resize({
-        width: 2560,
-        height: 2560,
-        fit: "inside",
-        withoutEnlargement: true,
-      });
-
-    if (type.format === "jpeg") pipeline.jpeg({ quality: 90, mozjpeg: true });
-    else if (type.format === "png") pipeline.png();
-    else pipeline.webp({ quality: 90 });
-
-    const result = await pipeline.toBuffer({ resolveWithObject: true });
-    output = result.data;
-    width = result.info.width;
-    height = result.info.height;
-  } catch {
-    return apiError(415, "invalid_image", "The image could not be processed");
+    image = await processDeckImage(
+      new Uint8Array(await file.arrayBuffer()),
+      file.type,
+      maxBytes,
+    );
+  } catch (error) {
+    if (error instanceof ImageValidationError) {
+      return apiError(
+        error.code === "image_too_large" ? 413 : 415,
+        error.code,
+        error.message,
+        { ...(error.details ? { details: error.details } : {}) },
+      );
+    }
+    throw error;
   }
 
-  const assetId = createAssetId();
-  const objectKey = `decks/${deckId}/${assetId}.${type.extension}`;
-  const mimeType = file.type;
-  const storage = getAssetStorage();
-  await storage.put(objectKey, output, mimeType);
-
-  const { db } = getDatabase();
-  await db.insert(deckAssets).values({
-    id: assetId,
-    deckId,
-    objectKey,
-    mimeType,
-    byteSize: output.byteLength,
-    width,
-    height,
-    createdAt: new Date(),
-  });
-
-  return jsonResponse(
-    {
-      asset: {
-        id: assetId,
-        url: `/api/assets/${assetId}`,
-        mimeType,
-        width,
-        height,
-      },
-    },
-    { status: 201 },
-  );
+  const asset = await persistDeckImage(deckId, image);
+  return jsonResponse({ asset }, { status: 201 });
 }

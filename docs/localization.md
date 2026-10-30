@@ -96,6 +96,10 @@ Glossary:
 | present | παρουσίαση |
 | export | εξαγωγή |
 | image | εικόνα |
+| stock photo | φωτογραφία αποθετηρίου |
+| image search / import | αναζήτηση / εισαγωγή εικόνας |
+| photographer credit | αναφορά φωτογράφου |
+| transition | μετάβαση |
 | rectangle / ellipse / arrow | ορθογώνιο / έλλειψη / βέλος |
 | fill / stroke | γέμισμα / περίγραμμα |
 | opacity / rotation | αδιαφάνεια / περιστροφή |
@@ -108,9 +112,7 @@ The Greek copy was authored against the glossary above and checked for missing k
 AI linguistic pass: OpenCode, 2026-10-26
 Native-speaker reviewer: pending
 Native-speaker review date: pending
-```
-
-## API and operation errors
+```## API and operation errors
 
 API envelopes keep their existing stable shape:
 

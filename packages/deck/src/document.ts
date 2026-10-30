@@ -14,14 +14,20 @@ import type {
   DeckData,
   ElementData,
   EllipseElementData,
+  ImageCredit,
   ImageElementData,
   LineElementData,
   RectElementData,
   ShapeElementData,
   SlideData,
+  SlideTransition,
   TextElementData,
 } from "./types.js";
-import { isShapeKind } from "./types.js";
+import {
+  isImageCreditProvider,
+  isShapeKind,
+  isSlideTransition,
+} from "./types.js";
 import { createElementId } from "./tokens.js";
 
 export type SlideMap = Y.Map<unknown>;
@@ -48,6 +54,7 @@ export function createInitialDeckDoc(title: string = DEFAULT_TITLE): Y.Doc {
 export function createSlideMap(slideId: string = createElementId()): SlideMap {
   const slide = new Y.Map<unknown>();
   slide.set("background", DEFAULT_SLIDE_BACKGROUND);
+  slide.set("transition", "none");
   slide.set("elements", new Y.Map<ElementMap>());
   slide.set("elementOrder", new Y.Array<string>());
   slide.set("id", slideId);
@@ -91,6 +98,11 @@ export function getSlide(doc: Y.Doc, slideId: string): SlideMap | undefined {
 export function getSlideBackground(slide: SlideMap): string {
   const background = slide.get("background");
   return typeof background === "string" ? background : DEFAULT_SLIDE_BACKGROUND;
+}
+
+export function getSlideTransition(slide: SlideMap): SlideTransition {
+  const transition = slide.get("transition");
+  return isSlideTransition(transition) ? transition : "none";
 }
 
 export function getSlideElements(slide: SlideMap): Y.Map<ElementMap> {
@@ -183,10 +195,12 @@ export function getElementData(element: ElementMap): ElementData | null {
   if (type === "image") {
     const assetId = element.get("assetId");
     if (typeof assetId !== "string" || !assetId) return null;
+    const credit = imageCreditValue(element.get("credit"));
     return {
       ...base,
       type: "image",
       assetId,
+      ...(credit ? { credit } : {}),
     } satisfies ImageElementData;
   }
 
@@ -231,6 +245,7 @@ export function getSlideData(doc: Y.Doc, slideId: string): SlideData | null {
   return {
     id: slideId,
     background: getSlideBackground(slide),
+    transition: getSlideTransition(slide),
     elements: ordered,
   };
 }
@@ -272,4 +287,39 @@ function booleanValue(value: unknown, fallback: boolean): boolean {
 
 function alignValue(value: unknown): "left" | "center" | "right" {
   return value === "center" || value === "right" ? value : "left";
+}
+
+function imageCreditValue(value: unknown): ImageCredit | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const credit = value as Record<string, unknown>;
+  const provider = credit.provider;
+  const photographerName = credit.photographerName;
+  const photographerUrl = safeHttpsUrl(credit.photographerUrl);
+  const sourceUrl = safeHttpsUrl(credit.sourceUrl);
+  if (
+    !isImageCreditProvider(provider) ||
+    typeof photographerName !== "string" ||
+    !photographerName.trim() ||
+    photographerName.length > 200 ||
+    !photographerUrl ||
+    !sourceUrl
+  ) {
+    return undefined;
+  }
+  return {
+    provider,
+    photographerName: photographerName.trim(),
+    photographerUrl,
+    sourceUrl,
+  };
+}
+
+function safeHttpsUrl(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length > 2048) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
 }

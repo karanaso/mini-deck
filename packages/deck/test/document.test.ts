@@ -4,6 +4,7 @@ import * as Y from "yjs";
 import {
   addElement,
   bringToFront,
+  createClipboardEnvelope,
   createInitialDeckDoc,
   createSlide,
   createTextElement,
@@ -21,9 +22,11 @@ import {
   getDeckTitle,
   LastSlideError,
   nudgeElements,
+  parseClipboardEnvelope,
   reorderSlide,
   setDeckTitle,
   setElementText,
+  setSlideTransition,
   updateElement,
   updateYText,
 } from "../src/index.js";
@@ -77,6 +80,119 @@ describe("slides", () => {
   it("prevents deleting the last slide", () => {
     const doc = createInitialDeckDoc();
     expect(() => deleteSlide(doc, getOrderedSlideIds(doc)[0])).toThrow(LastSlideError);
+  });
+});
+
+describe("slide transitions", () => {
+  it("defaults new slides to none", () => {
+    const doc = createInitialDeckDoc();
+    const slideId = getOrderedSlideIds(doc)[0];
+    expect(getSlideData(doc, slideId)?.transition).toBe("none");
+
+    const added = createSlide(doc, slideId);
+    expect(getSlideData(doc, added)?.transition).toBe("none");
+  });
+
+  it("round-trips valid transitions and treats invalid values as none", () => {
+    const doc = createInitialDeckDoc();
+    const slideId = getOrderedSlideIds(doc)[0];
+
+    setSlideTransition(doc, slideId, "push");
+    expect(getSlideData(doc, slideId)?.transition).toBe("push");
+
+    getSlide(doc, slideId)?.set("transition", "wipe");
+    expect(getSlideData(doc, slideId)?.transition).toBe("none");
+
+    getSlide(doc, slideId)?.delete("transition");
+    expect(getSlideData(doc, slideId)?.transition).toBe("none");
+
+    expect(() =>
+      setSlideTransition(doc, slideId, "spin" as never),
+    ).toThrow(/Invalid slide transition/);
+  });
+
+  it("copies the transition when duplicating a slide", () => {
+    const doc = createInitialDeckDoc();
+    const slideId = getOrderedSlideIds(doc)[0];
+    setSlideTransition(doc, slideId, "zoom");
+
+    const copy = duplicateSlide(doc, slideId);
+    expect(getSlideData(doc, copy)?.transition).toBe("zoom");
+  });
+});
+
+describe("image credit", () => {
+  const credit = {
+    provider: "unsplash" as const,
+    photographerName: "Ada Lovelace",
+    photographerUrl: "https://unsplash.com/@ada",
+    sourceUrl: "https://unsplash.com/photos/abc",
+  };
+
+  it("round-trips valid credit and keeps it through duplication and clipboard", () => {
+    const doc = createInitialDeckDoc();
+    const slideId = getOrderedSlideIds(doc)[0];
+    const id = addElement(doc, slideId, {
+      id: "image-credit-1",
+      type: "image",
+      assetId: "asset-12345678",
+      x: 10,
+      y: 20,
+      width: 300,
+      height: 200,
+      rotation: 0,
+      opacity: 1,
+      credit,
+    });
+
+    expect(getSlideData(doc, slideId)?.elements[0]).toMatchObject({
+      type: "image",
+      assetId: "asset-12345678",
+      credit,
+    });
+
+    const copy = duplicateElements(doc, slideId, [id], 0);
+    expect(
+      getSlideData(doc, slideId)?.elements.find((element) => element.id === copy[0]),
+    ).toMatchObject({ credit });
+
+    const slide = getSlideData(doc, slideId);
+    expect(slide).not.toBeNull();
+    const parsed = parseClipboardEnvelope(
+      createClipboardEnvelope(slide?.elements ?? []),
+    );
+    expect(parsed?.[0]).toMatchObject({ credit });
+  });
+
+  it("drops malformed credit without losing the image", () => {
+    const doc = createInitialDeckDoc();
+    const slideId = getOrderedSlideIds(doc)[0];
+    const id = addElement(doc, slideId, {
+      id: "image-credit-2",
+      type: "image",
+      assetId: "asset-87654321",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      rotation: 0,
+      opacity: 1,
+    });
+    const element = getSlideElements(getSlide(doc, slideId)!).get(id) as Y.Map<unknown>;
+
+    element.set("credit", { ...credit, provider: "flickr" });
+    expect(getSlideData(doc, slideId)?.elements[0]).toMatchObject({
+      type: "image",
+      assetId: "asset-87654321",
+    });
+    expect(
+      (getSlideData(doc, slideId)?.elements[0] as { credit?: unknown }).credit,
+    ).toBeUndefined();
+
+    element.set("credit", { ...credit, sourceUrl: "javascript:alert(1)" });
+    expect(
+      (getSlideData(doc, slideId)?.elements[0] as { credit?: unknown }).credit,
+    ).toBeUndefined();
   });
 });
 
