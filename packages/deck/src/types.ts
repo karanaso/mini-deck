@@ -61,6 +61,11 @@ export type ElementType =
 export type TextAlign = "left" | "center" | "right";
 export type Role = "editor" | "viewer";
 
+export interface ContentOwner {
+  id: string;
+  name: string;
+}
+
 export function isShapeKind(value: unknown): value is ShapeKind {
   return (
     typeof value === "string" &&
@@ -76,6 +81,7 @@ interface BaseElementData {
   height: number;
   rotation: number;
   opacity: number;
+  owner?: ContentOwner;
 }
 
 export interface TextElementData extends BaseElementData {
@@ -145,6 +151,7 @@ export interface SlideData {
   background: string;
   transition: SlideTransition;
   elements: ElementData[];
+  owner?: ContentOwner;
 }
 
 export interface DeckData {
@@ -185,6 +192,14 @@ export interface ClipboardEnvelope {
 const idSchema = z.string().min(1).max(64);
 const colorSchema = z.string().min(1).max(32);
 const finiteNumber = z.number().finite();
+
+export const contentOwnerSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().trim().min(1).max(MAX_PARTICIPANT_NAME),
+  })
+  .strict();
+
 const baseElementShape = {
   id: idSchema,
   x: finiteNumber,
@@ -193,6 +208,7 @@ const baseElementShape = {
   height: finiteNumber.min(1).max(20_000),
   rotation: finiteNumber.min(-360_000).max(360_000),
   opacity: finiteNumber.min(0).max(1),
+  owner: contentOwnerSchema.optional(),
 };
 
 export const textElementSchema = z

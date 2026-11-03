@@ -5,5 +5,6 @@ export * from "./tokens.js";
 export * from "./unlock-session.js";
 export * from "./document.js";
 export * from "./operations.js";
+export * from "./ownership.js";
 export * from "./clipboard.js";
 export * from "./rate-limit.js";

@@ -43,6 +43,7 @@ import { useI18n } from "@/components/i18n/locale-provider";
 import { useAwarenessStates } from "@/hooks/use-awareness";
 import { useSlideData } from "@/hooks/use-deck";
 import { useDeckContext } from "@/components/editor/deck-provider";
+import { useDeletionGuard } from "@/components/editor/deletion-guard";
 import {
   boundsIntersect,
   fitScale,
@@ -69,7 +70,7 @@ const PADDING = 28;
 
 export function CanvasStage({ slideId, role }: CanvasStageProps) {
   const { t } = useI18n();
-  const { doc, provider, undoManager } = useDeckContext();
+  const { doc, provider, owner, undoManager } = useDeckContext();
   const slide = useSlideData(doc, slideId);
   const awarenessEntries = useAwarenessStates(provider);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -96,6 +97,7 @@ export function CanvasStage({ slideId, role }: CanvasStageProps) {
   const toggleSelection = useEditorStore((state) => state.toggleSelection);
   const setSelectedIds = useEditorStore((state) => state.setSelectedIds);
   const clearSelection = useEditorStore((state) => state.clearSelection);
+  const { guardElementDeletion } = useDeletionGuard();
 
   const editable = role === "editor";
   const scale = fitScale(size.width, size.height, PADDING) * zoom;
@@ -264,7 +266,7 @@ export function CanvasStage({ slideId, role }: CanvasStageProps) {
             ? { ...common, type: "line" }
             : { ...common, type: "arrow" };
         try {
-          addElement(doc, slideId, element);
+          addElement(doc, slideId, owner ? { ...element, owner } : element);
           selectOnly(element.id);
           undoManager.stopCapturing();
         } catch {
@@ -316,7 +318,7 @@ export function CanvasStage({ slideId, role }: CanvasStageProps) {
           };
         }
         try {
-          addElement(doc, slideId, element);
+          addElement(doc, slideId, owner ? { ...element, owner } : element);
           selectOnly(element.id);
           undoManager.stopCapturing();
         } catch {
@@ -326,7 +328,7 @@ export function CanvasStage({ slideId, role }: CanvasStageProps) {
       }
       setTool("select");
     },
-    [doc, editable, selectOnly, setTool, slide, slideId, undoManager],
+    [doc, editable, owner, selectOnly, setTool, slide, slideId, undoManager],
   );
 
   const createTextAt = useCallback(
@@ -339,6 +341,7 @@ export function CanvasStage({ slideId, role }: CanvasStageProps) {
           width: 520,
           height: 110,
           text: "",
+          ...(owner ? { owner } : {}),
         });
         selectOnly(id);
         setEditingId(id);
@@ -348,7 +351,7 @@ export function CanvasStage({ slideId, role }: CanvasStageProps) {
         toast.error(t("errors.deck.addText"));
       }
     },
-    [doc, editable, selectOnly, setTool, slideId, undoManager],
+    [doc, editable, owner, selectOnly, setTool, slideId, undoManager],
   );
 
   const moveElement = useCallback(
@@ -621,8 +624,10 @@ export function CanvasStage({ slideId, role }: CanvasStageProps) {
               (element) => element.id === editingElement.id,
             );
             if (latest?.type === "text" && !latest.text.trim()) {
-              deleteElements(doc, slideId, [editingElement.id]);
-              clearSelection();
+              if (guardElementDeletion(slideId, [editingElement.id])) {
+                deleteElements(doc, slideId, [editingElement.id]);
+                clearSelection();
+              }
             }
             undoManager.stopCapturing();
             setEditingId(null);

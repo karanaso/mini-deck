@@ -20,6 +20,7 @@ import {
 } from "@mini-deck/deck";
 
 import { useDeckContext } from "@/components/editor/deck-provider";
+import { useDeletionGuard } from "@/components/editor/deletion-guard";
 import { useI18n } from "@/components/i18n/locale-provider";
 import { useSlideData, useSlideIds } from "@/hooks/use-deck";
 import { renderSlideToDataUrl } from "@/lib/render-slide";
@@ -28,17 +29,18 @@ import { useEditorStore } from "@/store/editor-store";
 
 export function SlideRail({ role }: { role: Role }) {
   const { t } = useI18n();
-  const { doc, undoManager } = useDeckContext();
+  const { doc, owner, undoManager } = useDeckContext();
   const slideIds = useSlideIds(doc);
   const currentSlideId = useEditorStore((state) => state.currentSlideId);
   const setCurrentSlide = useEditorStore((state) => state.setCurrentSlide);
+  const { guardSlideDeletion } = useDeletionGuard();
   const editable = role === "editor";
   const [dragSlideId, setDragSlideId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   function addSlide() {
     try {
-      const id = createSlide(doc, currentSlideId ?? undefined);
+      const id = createSlide(doc, currentSlideId ?? undefined, owner ?? undefined);
       setCurrentSlide(id);
       undoManager.stopCapturing();
     } catch {
@@ -49,7 +51,7 @@ export function SlideRail({ role }: { role: Role }) {
   function duplicateCurrent() {
     if (!currentSlideId) return;
     try {
-      const id = duplicateSlide(doc, currentSlideId);
+      const id = duplicateSlide(doc, currentSlideId, owner ?? undefined);
       setCurrentSlide(id);
       undoManager.stopCapturing();
     } catch {
@@ -59,6 +61,7 @@ export function SlideRail({ role }: { role: Role }) {
 
   function removeCurrent() {
     if (!currentSlideId) return;
+    if (!guardSlideDeletion(currentSlideId)) return;
     const index = slideIds.indexOf(currentSlideId);
     try {
       deleteSlide(doc, currentSlideId);

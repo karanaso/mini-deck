@@ -11,6 +11,7 @@ import {
 } from "@mini-deck/deck";
 
 import { useDeckContext } from "@/components/editor/deck-provider";
+import { useDeletionGuard } from "@/components/editor/deletion-guard";
 import { useI18n } from "@/components/i18n/locale-provider";
 import { messageForError } from "@/lib/api-error";
 import { useEditorStore, type EditorTool } from "@/store/editor-store";
@@ -20,6 +21,7 @@ export function useEditorShortcuts(slideIds: readonly string[]) {
   const {
     doc,
     role,
+    owner,
     undo,
     redo,
     canUndo,
@@ -32,6 +34,7 @@ export function useEditorShortcuts(slideIds: readonly string[]) {
   const setCurrentSlide = useEditorStore((state) => state.setCurrentSlide);
   const setTool = useEditorStore((state) => state.setTool);
   const clearSelection = useEditorStore((state) => state.clearSelection);
+  const { guardElementDeletion } = useDeletionGuard();
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -55,7 +58,13 @@ export function useEditorShortcuts(slideIds: readonly string[]) {
         event.preventDefault();
         if (role === "editor" && slide) {
           try {
-            const ids = duplicateElements(doc, slide.id, selectedIds);
+            const ids = duplicateElements(
+              doc,
+              slide.id,
+              selectedIds,
+              undefined,
+              owner ?? undefined,
+            );
             undoManager.stopCapturing();
             if (ids.length > 0) {
               useEditorStore.getState().setSelectedIds(ids);
@@ -76,6 +85,7 @@ export function useEditorShortcuts(slideIds: readonly string[]) {
           toast.info(t("editor.readOnly"));
           return;
         }
+        if (!guardElementDeletion(slide.id, selectedIds)) return;
         deleteElements(doc, slide.id, selectedIds);
         undoManager.stopCapturing();
         clearSelection();
@@ -144,6 +154,8 @@ export function useEditorShortcuts(slideIds: readonly string[]) {
     clearSelection,
     currentSlideId,
     doc,
+    guardElementDeletion,
+    owner,
     presentationOpen,
     redo,
     role,

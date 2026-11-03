@@ -19,11 +19,13 @@ import {
   getMeta,
   getSlideOrder,
   getSlides,
+  type ContentOwner,
   type ParticipantState,
   type Role,
 } from "@mini-deck/deck";
 
 import { useI18n } from "@/components/i18n/locale-provider";
+import { getOrCreateOwnerId } from "@/lib/owner-identity";
 import {
   readStoredParticipant,
   resolveParticipant,
@@ -44,6 +46,7 @@ interface DeckContextValue {
   status: ConnectionStatus;
   synced: boolean;
   participant: ParticipantState | null;
+  owner: ContentOwner | null;
   canUndo: boolean;
   canRedo: boolean;
   renameParticipant: (name: string) => void;
@@ -80,8 +83,17 @@ export function DeckProvider({
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [synced, setSynced] = useState(false);
   const [participant, setParticipant] = useState<ParticipantState | null>(null);
+  const [ownerId] = useState<string | null>(() => getOrCreateOwnerId());
   const [history, setHistory] = useState({ canUndo: false, canRedo: false });
   const reconciled = useRef(false);
+
+  const owner = useMemo<ContentOwner | null>(
+    () =>
+      participant
+        ? { id: ownerId ?? participant.id, name: participant.name }
+        : null,
+    [ownerId, participant],
+  );
 
   const undoManager = useMemo(
     () =>
@@ -223,6 +235,7 @@ export function DeckProvider({
       status,
       synced,
       participant,
+      owner,
       canUndo: history.canUndo,
       canRedo: history.canRedo,
       renameParticipant,
@@ -241,6 +254,7 @@ export function DeckProvider({
       status,
       synced,
       participant,
+      owner,
       history.canUndo,
       history.canRedo,
       renameParticipant,

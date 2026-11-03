@@ -15,6 +15,7 @@ import {
 } from "@mini-deck/deck";
 
 import { useDeckContext } from "@/components/editor/deck-provider";
+import { useDeletionGuard } from "@/components/editor/deletion-guard";
 import { useI18n } from "@/components/i18n/locale-provider";
 import { isTypingTarget } from "@/hooks/use-editor-shortcuts";
 import { messageForError } from "@/lib/api-error";
@@ -24,11 +25,12 @@ import { useEditorStore } from "@/store/editor-store";
 
 export function useEditorClipboard() {
   const { t } = useI18n();
-  const { deckId, token, doc, role, undoManager } = useDeckContext();
+  const { deckId, token, doc, role, owner, undoManager } = useDeckContext();
   const currentSlideId = useEditorStore((state) => state.currentSlideId);
   const selectedIds = useEditorStore((state) => state.selectedIds);
   const presentationOpen = useEditorStore((state) => state.presentationOpen);
   const setSelectedIds = useEditorStore((state) => state.setSelectedIds);
+  const { guardElementDeletion } = useDeletionGuard();
 
   useEffect(() => {
     function copyHandler(event: ClipboardEvent) {
@@ -48,6 +50,9 @@ export function useEditorClipboard() {
       const elements = slide?.elements.filter((element) => selectedIds.includes(element.id));
       if (!elements || elements.length === 0) return;
       event.preventDefault();
+      if (!guardElementDeletion(currentSlideId, elements.map((element) => element.id))) {
+        return;
+      }
       writeElementsToClipboard(event, elements);
       deleteElements(doc, currentSlideId, elements.map((element) => element.id));
       setSelectedIds([]);
@@ -69,7 +74,7 @@ export function useEditorClipboard() {
 
       if (parsed.elements) {
         try {
-          const prepared = preparePastedElements(parsed.elements, 24);
+          const prepared = preparePastedElements(parsed.elements, 24, owner ?? undefined);
           const ids: string[] = [];
           for (const element of prepared) {
             addElement(doc, currentSlideId, element);
@@ -111,6 +116,7 @@ export function useEditorClipboard() {
               rotation: 0,
               opacity: 1,
               assetId: asset.id,
+              ...(owner ? { owner } : {}),
             });
             setSelectedIds([id]);
             undoManager.stopCapturing();
@@ -134,6 +140,7 @@ export function useEditorClipboard() {
             height: 220,
             text,
             fontSize: 42,
+            ...(owner ? { owner } : {}),
           });
           setSelectedIds([id]);
           undoManager.stopCapturing();
@@ -157,6 +164,8 @@ export function useEditorClipboard() {
     currentSlideId,
     deckId,
     doc,
+    guardElementDeletion,
+    owner,
     presentationOpen,
     role,
     selectedIds,

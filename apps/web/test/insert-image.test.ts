@@ -14,11 +14,13 @@ describe("placeImageAsset", () => {
     const slideId = getOrderedSlideIds(doc)[0];
     const selectOnly = vi.fn();
     const stopCapturing = vi.fn();
+    const owner = { id: "owner-a", name: "Blue Fox" };
 
     const id = placeImageAsset({
       doc,
       slideId,
       asset: { id: "asset-landscape", width: 2400, height: 1200 },
+      owner,
       selectOnly,
       undoManager: { stopCapturing },
     });
@@ -33,6 +35,7 @@ describe("placeImageAsset", () => {
       x: (1920 - 1200) / 2,
       y: (1080 - 600) / 2,
     });
+    expect(image?.owner).toEqual(owner);
     expect(selectOnly).toHaveBeenCalledWith(id);
     expect(stopCapturing).toHaveBeenCalledTimes(1);
   });

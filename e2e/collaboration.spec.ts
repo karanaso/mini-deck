@@ -157,6 +157,85 @@ test("participant display name updates for collaborators", async ({ page, browse
   await otherContext.close();
 });
 
+test("editors cannot delete another participant's work", async ({ page, browser }) => {
+  await createDeck(page);
+  const otherContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const other = await otherContext.newPage();
+  await openDeck(other, page.url());
+
+  await other.getByRole("button", { name: /rename/ }).click();
+  await other.getByTestId("participant-name").fill("Bella");
+  await other.getByTestId("save-participant").click();
+
+  await drawElement(page, "rect", { x: 260, y: 300 }, { x: 430, y: 440 });
+  await drawElement(other, "ellipse", { x: 600, y: 300 }, { x: 780, y: 440 });
+  await expect.poll(() => elementCount(page)).toBe(2);
+
+  const dialog = page.getByTestId("ownership-dialog");
+  const message = page.getByTestId("ownership-message");
+
+  await selectElement(page, 1);
+  await page.keyboard.press("Delete");
+  await expect(dialog).toBeVisible();
+  await expect(message).toContainText("Bella");
+  await expect.poll(() => elementCount(page)).toBe(2);
+  await page.getByTestId("ownership-dismiss").click();
+  await expect(dialog).toHaveCount(0);
+
+  await selectElement(page, 1);
+  await page.keyboard.press("Control+x");
+  await expect(dialog).toBeVisible();
+  await expect(message).toContainText("Bella");
+  await expect.poll(() => elementCount(page)).toBe(2);
+  await page.getByTestId("ownership-dismiss").click();
+
+  await selectElement(page, 0);
+  const target = page.locator('[data-testid="element-list"] button').nth(1);
+  const box = await getCanvasBox(page);
+  const stage = await page.getByTestId("canvas-stage").evaluate((element) => ({
+    scale: Number((element as HTMLElement).dataset.scale),
+    contentX: Number((element as HTMLElement).dataset.contentX),
+    contentY: Number((element as HTMLElement).dataset.contentY),
+  }));
+  const targetX = Number(await target.getAttribute("data-element-x"));
+  const targetY = Number(await target.getAttribute("data-element-y"));
+  const targetWidth = Number(await target.getAttribute("data-element-width"));
+  const targetHeight = Number(await target.getAttribute("data-element-height"));
+  await page.keyboard.down("Shift");
+  await page.mouse.click(
+    box.x + stage.contentX + (targetX + targetWidth / 2) * stage.scale,
+    box.y + stage.contentY + (targetY + targetHeight / 2) * stage.scale,
+  );
+  await page.keyboard.up("Shift");
+  await page.keyboard.press("Delete");
+  await expect(dialog).toBeVisible();
+  await expect(message).toContainText("Bella");
+  await expect.poll(() => elementCount(page)).toBe(2);
+  await page.getByTestId("ownership-dismiss").click();
+  await page.keyboard.press("Escape");
+
+  await addSlide(other);
+  await expect(page.locator('[data-testid^="slide-"]')).toHaveCount(2);
+  await page.getByTestId("slide-1").click();
+  await page.getByRole("button", { name: "Delete slide" }).click();
+  await expect(dialog).toBeVisible();
+  await expect(message).toContainText("Bella");
+  await expect(page.locator('[data-testid^="slide-"]')).toHaveCount(2);
+  await page.getByTestId("ownership-dismiss").click();
+  await page.getByTestId("slide-0").click();
+
+  await other.getByTestId("slide-0").click();
+  await selectElement(other, 1);
+  await other.keyboard.press("Delete");
+  await expect.poll(() => elementCount(page)).toBe(1);
+
+  await selectElement(page, 0);
+  await page.keyboard.press("Delete");
+  await expect.poll(() => elementCount(page)).toBe(0);
+
+  await otherContext.close();
+});
+
 test("a participant viewing a deleted slide moves to an adjacent slide", async ({
   page,
   browser,

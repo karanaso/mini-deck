@@ -11,7 +11,9 @@ import {
   getCanvasBox,
   getViewUrl,
   insertEmoji,
+  makeDeckLegacy,
   openDeck,
+  seedUnownedDeckContent,
   selectElement,
   setNativeValue,
 } from "./helpers";
@@ -268,4 +270,24 @@ test("viewers cannot draw shapes or insert emoji", async ({ page, browser }) => 
   await expect(viewer.getByTestId("tool-shapes")).toHaveCount(0);
   await expect(viewer.getByTestId("tool-emoji")).toHaveCount(0);
   await context.close();
+});
+
+test("opens a pre-ownership deck and deletes its unowned element", async ({ page }) => {
+  const response = await page.request.post("/api/decks");
+  expect(response.ok()).toBe(true);
+  const created = (await response.json()) as { deckId: string; editToken: string };
+
+  await makeDeckLegacy(created.deckId);
+  await seedUnownedDeckContent(created.deckId);
+
+  const origin = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3100";
+  await openDeck(page, `${origin}/d/${created.deckId}#${created.editToken}`);
+  await expect.poll(() => elementCount(page)).toBe(1);
+  await expect(
+    page.locator('[data-testid="element-list"] button').first(),
+  ).toHaveAttribute("data-element-text", "Legacy unowned element");
+
+  await selectElement(page, 0);
+  await page.keyboard.press("Delete");
+  await expect.poll(() => elementCount(page)).toBe(0);
 });

@@ -38,7 +38,7 @@ The system SHALL let an editor change the deck title inline and show the updated
 
 ### Requirement: Manage slides
 
-The system SHALL let editors add, duplicate, and delete slides. A deck MUST always contain at least one slide, and deleting the last remaining slide MUST be prevented.
+The system SHALL let editors add, duplicate, and delete slides. A deck MUST always contain at least one slide, and deleting the last remaining slide MUST be prevented. Deleting a slide owned by another participant, or containing elements owned by another participant, MUST be blocked with an ownership prompt.
 
 #### Scenario: Add a slide
 
@@ -55,6 +55,19 @@ The system SHALL let editors add, duplicate, and delete slides. A deck MUST alwa
 
 - **WHEN** an editor attempts to delete the only remaining slide
 - **THEN** the slide remains and the editor is told that a deck needs at least one slide
+
+#### Scenario: Delete another participant's slide
+
+- **WHEN** an editor attempts to delete a slide owned by another participant
+- **THEN** the slide remains
+- **AND** the editor is shown a prompt naming the owner
+
+#### Scenario: Delete a slide containing another participant's work
+
+- **WHEN** an editor owns a slide but another participant has added an element to it
+- **AND** the editor attempts to delete the slide
+- **THEN** the slide remains with all its elements
+- **AND** the editor is shown a prompt naming the element's owner
 
 ### Requirement: Reorder slides
 
@@ -131,7 +144,7 @@ The system SHALL support selecting one element, adding elements to the selection
 
 ### Requirement: Transform elements
 
-The system SHALL let editors move, resize, rotate, and delete selected elements, and nudge them with the arrow keys. Transforms MUST preserve the element's aspect ratio when resizing with Shift held.
+The system SHALL let editors move, resize, rotate, and delete selected elements, and nudge them with the arrow keys. Transforms MUST preserve the element's aspect ratio when resizing with Shift held. Deleting an element owned by another participant MUST be blocked with an ownership prompt.
 
 #### Scenario: Move an element
 
@@ -148,6 +161,12 @@ The system SHALL let editors move, resize, rotate, and delete selected elements,
 
 - **WHEN** an editor presses Delete or Backspace with elements selected
 - **THEN** the selected elements are removed for all participants
+
+#### Scenario: Delete another participant's element
+
+- **WHEN** an editor presses Delete or Backspace with an element owned by another participant selected
+- **THEN** the element remains for all participants
+- **AND** the editor is shown a prompt naming the owner
 
 ### Requirement: Restyle elements
 
@@ -179,7 +198,7 @@ The system SHALL let editors duplicate selected elements and change their stacki
 
 ### Requirement: Use the clipboard
 
-The system SHALL let editors copy, cut, and paste elements within a slide, across slides, and across decks. Pasting MUST preserve the relative positions of copied elements. The system SHALL also accept plain text and images from the system clipboard.
+The system SHALL let editors copy, cut, and paste elements within a slide, across slides, and across decks. Pasting MUST preserve the relative positions of copied elements. The system SHALL also accept plain text and images from the system clipboard. Cutting an element owned by another participant MUST be blocked with an ownership prompt.
 
 #### Scenario: Copy and paste within a slide
 
@@ -200,6 +219,12 @@ The system SHALL let editors copy, cut, and paste elements within a slide, acros
 
 - **WHEN** a participant with a view-only link attempts to paste
 - **THEN** no element is created and the participant remains read-only
+
+#### Scenario: Cut another participant's element
+
+- **WHEN** an editor cuts an element owned by another participant
+- **THEN** the element remains in the deck
+- **AND** the editor is shown a prompt naming the owner
 
 ### Requirement: Undo and redo
 

@@ -16,6 +16,7 @@ import {
   getSlideData,
   getSlideElements,
   getSlides,
+  setOwnerFields,
   type ElementMap,
   type SlideMap,
 } from "./document.js";
@@ -23,6 +24,7 @@ import { createElementId } from "./tokens.js";
 import {
   elementDataSchema,
   isSlideTransition,
+  type ContentOwner,
   type ElementData,
   type SlideData,
   type SlideTransition,
@@ -75,7 +77,11 @@ function requireElement(
   return element as ElementMap;
 }
 
-export function createSlide(doc: Y.Doc, afterSlideId?: string): string {
+export function createSlide(
+  doc: Y.Doc,
+  afterSlideId?: string,
+  owner?: ContentOwner,
+): string {
   const slideId = createElementId();
   withLocalTransaction(doc, () => {
     const slides = getSlides(doc);
@@ -83,7 +89,7 @@ export function createSlide(doc: Y.Doc, afterSlideId?: string): string {
       throw new DeckLimitError(`A deck can have at most ${MAX_SLIDES} slides`);
     }
     const order = doc.getArray<string>("slideOrder");
-    slides.set(slideId, createSlideMap(slideId));
+    slides.set(slideId, createSlideMap(slideId, owner));
     const existingIndex = afterSlideId ? order.toArray().indexOf(afterSlideId) : -1;
     const insertAt = existingIndex >= 0 ? existingIndex + 1 : order.length;
     order.insert(insertAt, [slideId]);
@@ -91,7 +97,11 @@ export function createSlide(doc: Y.Doc, afterSlideId?: string): string {
   return slideId;
 }
 
-export function duplicateSlide(doc: Y.Doc, slideId: string): string {
+export function duplicateSlide(
+  doc: Y.Doc,
+  slideId: string,
+  owner?: ContentOwner,
+): string {
   const source = getSlideData(doc, slideId);
   if (!source) throw new Error(`Slide not found: ${slideId}`);
 
@@ -101,13 +111,13 @@ export function duplicateSlide(doc: Y.Doc, slideId: string): string {
     if (slides.size >= MAX_SLIDES) {
       throw new DeckLimitError(`A deck can have at most ${MAX_SLIDES} slides`);
     }
-    const newSlide = createSlideMap(newSlideId);
+    const newSlide = createSlideMap(newSlideId, owner);
     newSlide.set("background", source.background);
     newSlide.set("transition", source.transition);
     const elements = getSlideElements(newSlide);
     const elementOrder = getElementOrder(newSlide);
     for (const element of source.elements) {
-      const copy = cloneElementData(element, 0);
+      const copy = cloneElementData(element, 0, owner);
       elements.set(copy.id, createElementMap(copy));
       elementOrder.push([copy.id]);
     }
@@ -292,6 +302,7 @@ export function duplicateElements(
   slideId: string,
   elementIds: readonly string[],
   offset = 24,
+  owner?: ContentOwner,
 ): string[] {
   if (elementIds.length === 0) return [];
   const source = getSlideData(doc, slideId);
@@ -314,7 +325,7 @@ export function duplicateElements(
     const elements = getSlideElements(slide);
     const order = getElementOrder(slide);
     for (const element of elementsToCopy) {
-      const copy = cloneElementData(element, offset);
+      const copy = cloneElementData(element, offset, owner);
       elements.set(copy.id, createElementMap(copy));
       order.push([copy.id]);
       newIds.push(copy.id);
@@ -447,13 +458,17 @@ export function updateYText(text: Y.Text | null, nextValue: string): void {
 export function cloneElementData(
   element: ElementData,
   offset = 24,
+  owner?: ContentOwner,
 ): ElementData {
-  return {
+  const copy = {
     ...structuredClone(element),
     id: createElementId(),
     x: element.x + offset,
     y: element.y + offset,
   };
+  delete (copy as Partial<ElementData>).owner;
+  if (owner) (copy as ElementData).owner = { ...owner };
+  return copy;
 }
 
 export function createElementMap(data: ElementData): ElementMap {
@@ -466,6 +481,7 @@ export function createElementMap(data: ElementData): ElementMap {
   element.set("height", data.height);
   element.set("rotation", data.rotation);
   element.set("opacity", data.opacity);
+  setOwnerFields(element, data.owner);
 
   switch (data.type) {
     case "text": {
@@ -516,7 +532,7 @@ export function createElementMap(data: ElementData): ElementMap {
 }
 
 export function createSlideDataMap(data: SlideData): SlideMap {
-  const slide = createSlideMap(data.id);
+  const slide = createSlideMap(data.id, data.owner);
   slide.set("background", data.background);
   slide.set("transition", isSlideTransition(data.transition) ? data.transition : "none");
   const elements = getSlideElements(slide);

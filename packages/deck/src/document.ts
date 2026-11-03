@@ -5,12 +5,14 @@ import {
   DEFAULT_SLIDE_BACKGROUND,
   DEFAULT_TITLE,
   LOCAL_ORIGIN,
+  MAX_PARTICIPANT_NAME,
   MAX_TITLE_LENGTH,
   SLIDE_HEIGHT,
   SLIDE_WIDTH,
 } from "./constants.js";
 import type {
   ArrowElementData,
+  ContentOwner,
   DeckData,
   ElementData,
   EllipseElementData,
@@ -51,14 +53,40 @@ export function createInitialDeckDoc(title: string = DEFAULT_TITLE): Y.Doc {
   return doc;
 }
 
-export function createSlideMap(slideId: string = createElementId()): SlideMap {
+export function createSlideMap(
+  slideId: string = createElementId(),
+  owner?: ContentOwner,
+): SlideMap {
   const slide = new Y.Map<unknown>();
   slide.set("background", DEFAULT_SLIDE_BACKGROUND);
   slide.set("transition", "none");
   slide.set("elements", new Y.Map<ElementMap>());
   slide.set("elementOrder", new Y.Array<string>());
   slide.set("id", slideId);
+  setOwnerFields(slide, owner);
   return slide;
+}
+
+export function setOwnerFields(target: Y.Map<unknown>, owner?: ContentOwner): void {
+  if (!owner) return;
+  target.set("ownerId", owner.id);
+  target.set("ownerName", owner.name);
+}
+
+export function getOwnerFields(target: Y.Map<unknown>): ContentOwner | undefined {
+  const id = target.get("ownerId");
+  const name = target.get("ownerName");
+  if (
+    typeof id !== "string" ||
+    !id ||
+    id.length > 64 ||
+    typeof name !== "string" ||
+    !name.trim() ||
+    name.length > MAX_PARTICIPANT_NAME
+  ) {
+    return undefined;
+  }
+  return { id, name: name.trim() };
 }
 
 export function normalizeTitle(value: string): string {
@@ -133,6 +161,7 @@ export function getElementData(element: ElementMap): ElementData | null {
   const id = element.get("id");
   if (typeof id !== "string" || typeof type !== "string") return null;
 
+  const owner = getOwnerFields(element);
   const base = {
     id,
     x: numberValue(element.get("x"), 0),
@@ -141,6 +170,7 @@ export function getElementData(element: ElementMap): ElementData | null {
     height: numberValue(element.get("height"), 120),
     rotation: numberValue(element.get("rotation"), 0),
     opacity: numberValue(element.get("opacity"), 1),
+    ...(owner ? { owner } : {}),
   };
 
   if (type === "text") {
@@ -242,11 +272,13 @@ export function getSlideData(doc: Y.Doc, slideId: string): SlideData | null {
     .map((element) => getElementData(element))
     .filter((element): element is ElementData => element !== null);
 
+  const owner = getOwnerFields(slide);
   return {
     id: slideId,
     background: getSlideBackground(slide),
     transition: getSlideTransition(slide),
     elements: ordered,
+    ...(owner ? { owner } : {}),
   };
 }
 

@@ -26,7 +26,7 @@ import { useEditorStore, type EditorTool } from "@/store/editor-store";
 
 export function Toolbar({ slideId }: { slideId: string }) {
   const { t } = useI18n();
-  const { deckId, token, doc, canUndo, canRedo, undo, redo, undoManager } =
+  const { deckId, token, doc, owner, canUndo, canRedo, undo, redo, undoManager } =
     useDeckContext();
   const tool = useEditorStore((state) => state.tool);
   const setTool = useEditorStore((state) => state.setTool);
@@ -72,6 +72,7 @@ export function Toolbar({ slideId }: { slideId: string }) {
         doc,
         slideId,
         asset,
+        owner,
         selectOnly,
         undoManager,
       });
@@ -92,6 +93,7 @@ export function Toolbar({ slideId }: { slideId: string }) {
         slideId,
         asset,
         credit,
+        owner,
         selectOnly,
         undoManager,
       });

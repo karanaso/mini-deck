@@ -26,6 +26,7 @@ import {
 } from "@mini-deck/deck";
 
 import { useDeckContext } from "@/components/editor/deck-provider";
+import { useDeletionGuard } from "@/components/editor/deletion-guard";
 import { ImageCreditLine } from "@/components/editor/image-credit";
 import { useI18n } from "@/components/i18n/locale-provider";
 import { useSlideData } from "@/hooks/use-deck";
@@ -37,11 +38,12 @@ import { useEditorStore } from "@/store/editor-store";
 
 export function StylePanel({ slideId }: { slideId: string }) {
   const { t, tCount } = useI18n();
-  const { doc, undoManager } = useDeckContext();
+  const { doc, owner, undoManager } = useDeckContext();
   const slide = useSlideData(doc, slideId);
   const selectedIds = useEditorStore((state) => state.selectedIds);
   const setSelectedIds = useEditorStore((state) => state.setSelectedIds);
   const clearSelection = useEditorStore((state) => state.clearSelection);
+  const { guardElementDeletion } = useDeletionGuard();
 
   const selected =
     slide?.elements.filter((element) => selectedIds.includes(element.id)) ?? [];
@@ -55,7 +57,13 @@ export function StylePanel({ slideId }: { slideId: string }) {
 
   function duplicate() {
     try {
-      const ids = duplicateElements(doc, slideId, selectedIds);
+      const ids = duplicateElements(
+        doc,
+        slideId,
+        selectedIds,
+        undefined,
+        owner ?? undefined,
+      );
       undoManager.stopCapturing();
       if (ids.length > 0) {
         setSelectedIds(ids);
@@ -70,6 +78,7 @@ export function StylePanel({ slideId }: { slideId: string }) {
   }
 
   function remove() {
+    if (!guardElementDeletion(slideId, selectedIds)) return;
     try {
       deleteElements(doc, slideId, selectedIds);
       undoManager.stopCapturing();

@@ -1,6 +1,11 @@
 import { create } from "zustand";
 
-import { SHAPE_KINDS, isShapeKind, type ShapeKind } from "@mini-deck/deck";
+import {
+  SHAPE_KINDS,
+  isShapeKind,
+  type ContentOwner,
+  type ShapeKind,
+} from "@mini-deck/deck";
 
 export type ShapeTool = ShapeKind | "line";
 export type EditorTool =
@@ -25,6 +30,7 @@ interface EditorState {
   shareOpen: boolean;
   presentationOpen: boolean;
   participantOpen: boolean;
+  blockedOwners: ContentOwner[];
   setCurrentSlide: (slideId: string) => void;
   setZoom: (zoom: number) => void;
   setTool: (tool: EditorTool) => void;
@@ -35,6 +41,7 @@ interface EditorState {
   setShareOpen: (open: boolean) => void;
   setPresentationOpen: (open: boolean) => void;
   setParticipantOpen: (open: boolean) => void;
+  setBlockedOwners: (owners: ContentOwner[]) => void;
   reset: () => void;
 }
 
@@ -46,6 +53,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   shareOpen: false,
   presentationOpen: false,
   participantOpen: false,
+  blockedOwners: [],
   setCurrentSlide: (slideId) => set({ currentSlideId: slideId, selectedIds: [] }),
   setZoom: (zoom) => set({ zoom: Math.max(0.5, Math.min(3, zoom)) }),
   setTool: (tool) => set({ tool }),
@@ -61,6 +69,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   setShareOpen: (shareOpen) => set({ shareOpen }),
   setPresentationOpen: (presentationOpen) => set({ presentationOpen }),
   setParticipantOpen: (participantOpen) => set({ participantOpen }),
+  setBlockedOwners: (blockedOwners) => set({ blockedOwners }),
   reset: () =>
     set({
       currentSlideId: null,
@@ -70,5 +79,6 @@ export const useEditorStore = create<EditorState>((set) => ({
       shareOpen: false,
       presentationOpen: false,
       participantOpen: false,
+      blockedOwners: [],
     }),
 }));

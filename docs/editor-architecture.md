@@ -35,6 +35,20 @@ The session endpoint returns `editor` or `viewer`. `EditorWorkspace` uses that r
 
 The server's read-only enforcement is the security boundary; hiding controls is only a UX layer.
 
+## Content ownership
+
+`DeckProvider` exposes an `owner` value that combines the browser's stable owner id (`apps/web/src/lib/owner-identity.ts`) with the current participant name. New slides and elements persist that owner as `ownerId`/`ownerName` fields in the Yjs maps. `packages/deck/src/ownership.ts` reads the fields and computes deletion conflicts.
+
+`DeletionGuardProvider` wraps `EditorWorkspace` and owns the single ownership dialog. Delete paths call `guardElementDeletion` or `guardSlideDeletion` before mutating the document:
+
+- Delete/Backspace in `use-editor-shortcuts.ts`;
+- cut in `use-editor-clipboard.ts`;
+- the style-panel delete button;
+- the slide-rail delete button;
+- the abandoned-empty-text cleanup in `canvas-stage.tsx`.
+
+Blocked deletions leave the selection and document untouched and show the owner name in a localized prompt. A slide check includes both the slide owner and every element owner on that slide. Duplication and paste create new objects owned by the acting participant; clipboard envelopes strip owner metadata so older clients can still parse them. Unowned legacy content remains deletable.
+
 ## Canvas
 
 `CanvasStage` wraps Konva:

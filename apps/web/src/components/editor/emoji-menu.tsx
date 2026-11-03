@@ -32,7 +32,7 @@ const EMOJI_HEIGHT = 160;
 
 export function EmojiMenu({ slideId }: { slideId: string }) {
   const { t } = useI18n();
-  const { doc, undoManager } = useDeckContext();
+  const { doc, owner, undoManager } = useDeckContext();
   const selectOnly = useEditorStore((state) => state.selectOnly);
   const setTool = useEditorStore((state) => state.setTool);
 
@@ -46,6 +46,7 @@ export function EmojiMenu({ slideId }: { slideId: string }) {
         text: entry.emoji,
         fontSize: 96,
         align: "center",
+        ...(owner ? { owner } : {}),
       });
       selectOnly(id);
       setTool("select");

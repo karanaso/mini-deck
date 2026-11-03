@@ -71,6 +71,20 @@ Scope: capability links, HTTP APIs, WebSocket collaboration, asset handling, cli
 - SQL is parameterized through Drizzle.
 - Logs redact tokens and contain deck ID, role, socket ID, and outcome only.
 
+## Ownership and deletion
+
+Slides and elements carry optional `ownerId` and `ownerName` metadata in the Yjs document. The owner id is a browser-scoped value stored in `localStorage` under `mini-deck:owner-id`; the name is a snapshot of the creator's participant name. A browser can therefore delete its own work after reopening the deck. If storage is unavailable or cleared, the browser loses that ownership proof.
+
+Editors cannot delete content owned by another participant. Every delete path—Delete/Backspace, cut, style-panel delete, slide deletion, and abandoned-empty-text cleanup—checks ownership first. A blocked action leaves the content in place and opens a prompt:
+
+- Title: “Can't delete this work”
+- Message: “This object belongs to {name}. You can't delete another person's work.”
+- Multiple owners: “These objects belong to {names}. You can't delete another person's work.”
+
+A mixed selection is blocked as a whole. Deleting a slide is blocked when the slide or any element on it belongs to another participant. Duplicating or pasting content assigns the new objects to the participant who performed the action. Unowned content, including decks created before this change, remains deletable.
+
+This is a collaborative UX safeguard, not an authorization boundary. Every editor still holds document write access, so a crafted Yjs update can bypass the client-side check. Ownership is also device-scoped: opening the deck on another device or clearing site storage cannot prove ownership of earlier work. Two people sharing one browser profile share an owner id.
+
 ## Findings and accepted risks
 
 1. **Links have no expiry.** Anyone with a protected link and its role PIN can access the deck until an editor resets access. Link revocation itself is not available; reset rotates all access values.
@@ -85,6 +99,8 @@ Scope: capability links, HTTP APIs, WebSocket collaboration, asset handling, cli
 
 - `packages/deck/test/tokens.test.ts` — token entropy/derivation/hash/role.
 - `packages/deck/test/clipboard.test.ts` — malformed/oversized clipboard data.
+- `packages/deck/test/ownership.test.ts` — owner storage, duplication ownership, and deletion conflicts.
+- `e2e/collaboration.spec.ts` — cross-editor delete blocking, owner prompt, mixed selection, cut, and slide protection.
 - `apps/web/test/api.integration.test.ts` — hashed storage, generic 404, headers, upload validation, viewer rejection, rate limiting.
 - `apps/web/test/access.integration.test.ts` — PIN creation, link unlock, join lookup/unlock, reset rotation, legacy link-only decks.
 - `apps/collab/test/collab.integration.test.ts` — invalid tokens, link-token rejection for protected decks, unlock sessions, read-only writes, awareness, persistence, log redaction.
@@ -95,6 +111,7 @@ Scope: capability links, HTTP APIs, WebSocket collaboration, asset handling, cli
 ## Recommended follow-ups
 
 - Owner keys with link rotation/revocation.
+- Server-side semantic enforcement for destructive deck operations; client-side ownership checks only protect cooperative editors.
 - Nonce-based CSP and a formal third-party script ban.
 - Redis-backed rate limits and collaboration fan-out.
 - Object lifecycle cleanup for orphaned uploads.

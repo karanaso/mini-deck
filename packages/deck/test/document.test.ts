@@ -246,6 +246,36 @@ describe("elements", () => {
     ).toThrow();
   });
 
+  it("parses content ownership and rejects invalid owners", () => {
+    const base = {
+      id: "owned-rect",
+      type: "rect" as const,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 80,
+      rotation: 0,
+      opacity: 1,
+      fill: "#ffffff",
+      stroke: "#000000",
+      strokeWidth: 2,
+      cornerRadius: 4,
+    };
+
+    expect(
+      elementDataSchema.parse({
+        ...base,
+        owner: { id: "owner-1", name: "Blue Fox" },
+      }).owner,
+    ).toEqual({ id: "owner-1", name: "Blue Fox" });
+    expect(() =>
+      elementDataSchema.parse({ ...base, owner: { id: "", name: "Blue Fox" } }),
+    ).toThrow();
+    expect(() =>
+      elementDataSchema.parse({ ...base, owner: { id: "owner-1", name: "" } }),
+    ).toThrow();
+  });
+
   it("round-trips shape and line elements", () => {
     const doc = createInitialDeckDoc();
     const slideId = getOrderedSlideIds(doc)[0];

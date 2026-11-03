@@ -53,4 +53,15 @@ describe("editor store", () => {
       participantOpen: true,
     });
   });
+
+  it("tracks blocked owners and clears them on reset", () => {
+    const store = useEditorStore.getState();
+    store.setBlockedOwners([{ id: "owner-a", name: "Blue Fox" }]);
+    expect(useEditorStore.getState().blockedOwners).toEqual([
+      { id: "owner-a", name: "Blue Fox" },
+    ]);
+
+    store.reset();
+    expect(useEditorStore.getState().blockedOwners).toEqual([]);
+  });
 });

@@ -136,4 +136,19 @@ describe("clipboard codec", () => {
     expect(pasted[1].x - pasted[0].x).toBe(second.x - first.x);
     expect(pasted[1].y - pasted[0].y).toBe(second.y - first.y);
   });
+
+  it("strips source ownership from envelopes and applies the paster's owner", () => {
+    const owner = { id: "owner-a", name: "Blue Fox" };
+    const paster = { id: "owner-b", name: "Amber Otter" };
+    const owned = textElement({ owner });
+
+    const parsed = parseClipboardEnvelope(createClipboardEnvelope([owned]));
+    expect(parsed?.[0].owner).toBeUndefined();
+
+    const pasted = preparePastedElements([owned], 24, paster);
+    expect(pasted[0].owner).toEqual(paster);
+
+    const pastedWithoutOwner = preparePastedElements([owned], 24);
+    expect(pastedWithoutOwner[0].owner).toBeUndefined();
+  });
 });

@@ -4,7 +4,13 @@ import {
   type Page,
 } from "@playwright/test";
 import { PDFDocument } from "pdf-lib";
+import * as Y from "yjs";
 
+import {
+  createInitialDeckDoc,
+  createTextElement,
+  getOrderedSlideIds,
+} from "../packages/deck/dist/index.js";
 import { getDatabase } from "../packages/db/dist/index.js";
 
 export type InterfaceLocale = "en" | "el";
@@ -131,6 +137,22 @@ export async function makeDeckLegacy(deckId: string): Promise<void> {
     [deckId],
   );
   accessByDeck.delete(deckId);
+}
+
+export async function seedUnownedDeckContent(deckId: string): Promise<void> {
+  const doc = createInitialDeckDoc();
+  const slideId = getOrderedSlideIds(doc)[0];
+  createTextElement(doc, slideId, { text: "Legacy unowned element" });
+  const state = Y.encodeStateAsUpdate(doc);
+  doc.destroy();
+
+  const { client } = getDatabase();
+  await client.unsafe(
+    `UPDATE deck_documents
+     SET state = $1, updated_at = now()
+     WHERE deck_id = $2`,
+    [Buffer.from(state), deckId],
+  );
 }
 
 export async function setDeckJoinCode(deckId: string, joinCode: string): Promise<void> {

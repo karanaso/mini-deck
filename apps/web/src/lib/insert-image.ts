@@ -5,6 +5,7 @@ import {
   SLIDE_WIDTH,
   addElement,
   createElementId,
+  type ContentOwner,
   type ImageCredit,
 } from "@mini-deck/deck";
 
@@ -26,6 +27,7 @@ export interface PlaceImageAssetOptions {
   slideId: string;
   asset: ImageAsset;
   credit?: ImageCredit;
+  owner?: ContentOwner | null;
   selectOnly: (elementId: string) => void;
   undoManager: UndoManagerLike;
 }
@@ -39,6 +41,7 @@ export function placeImageAsset({
   slideId,
   asset,
   credit,
+  owner,
   selectOnly,
   undoManager,
 }: PlaceImageAssetOptions): string {
@@ -64,6 +67,7 @@ export function placeImageAsset({
     rotation: 0,
     opacity: 1,
     ...(credit ? { credit } : {}),
+    ...(owner ? { owner } : {}),
   });
   selectOnly(elementId);
   undoManager.stopCapturing();

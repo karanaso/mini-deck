@@ -250,6 +250,12 @@ const enMessages = {
 
   // Editor feedback
   "editor.readOnly": "This deck is read-only",
+  "editor.ownership.title": "Can't delete this work",
+  "editor.ownership.single":
+    "This object belongs to {name}. You can't delete another person's work.",
+  "editor.ownership.multiple":
+    "These objects belong to {names}. You can't delete another person's work.",
+  "editor.ownership.dismiss": "Got it",
   "editor.displayNameUpdated": "Display name updated",
   "editor.imageAdded": "Image added",
   "editor.imageAddError": "Could not add the image",

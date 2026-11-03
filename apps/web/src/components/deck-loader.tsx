@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Loader2, LockKeyhole, RefreshCcw } from "lucide-react";
 
 import { DeckProvider } from "@/components/editor/deck-provider";
+import { DeletionGuardProvider } from "@/components/editor/deletion-guard";
 import { EditorWorkspace } from "@/components/editor/editor-workspace";
 import { PinGate } from "@/components/editor/pin-gate";
 import { useI18n } from "@/components/i18n/locale-provider";
@@ -242,7 +243,9 @@ export function DeckLoader({ deckId }: { deckId: string }) {
       accessProtected={state.session.protected}
       role={state.session.role}
     >
-      <EditorWorkspace />
+      <DeletionGuardProvider>
+        <EditorWorkspace />
+      </DeletionGuardProvider>
     </DeckProvider>
   );
 }

@@ -6,6 +6,7 @@ import { cloneElementData } from "./operations.js";
 import {
   clipboardEnvelopeSchema,
   type ClipboardEnvelope,
+  type ContentOwner,
   type ElementData,
 } from "./types.js";
 import {
@@ -19,9 +20,11 @@ export function createClipboardEnvelope(elements: readonly ElementData[]): strin
   const envelope: ClipboardEnvelope = {
     format: "mini-deck/clipboard",
     version: 1,
-    elements: elements.slice(0, MAX_CLIPBOARD_ELEMENTS).map((element) =>
-      structuredClone(element),
-    ),
+    elements: elements.slice(0, MAX_CLIPBOARD_ELEMENTS).map((element) => {
+      const copy = structuredClone(element);
+      delete copy.owner;
+      return copy;
+    }),
   };
   return JSON.stringify(envelope);
 }
@@ -42,10 +45,11 @@ export function parseClipboardEnvelope(raw: string): ElementData[] | null {
 export function preparePastedElements(
   elements: readonly ElementData[],
   offset = 24,
+  owner?: ContentOwner,
 ): ElementData[] {
   if (elements.length === 0) return [];
   return elements.slice(0, MAX_CLIPBOARD_ELEMENTS).map((element) => {
-    const copy = cloneElementData(element, offset);
+    const copy = cloneElementData(element, offset, owner);
     return copy;
   });
 }

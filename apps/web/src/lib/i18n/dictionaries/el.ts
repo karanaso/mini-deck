@@ -255,6 +255,12 @@ export const el: EnglishDictionary = {
 
   // Editor feedback
   "editor.readOnly": "Αυτό το deck είναι μόνο για ανάγνωση",
+  "editor.ownership.title": "Δεν μπορείς να διαγράψεις αυτή την εργασία",
+  "editor.ownership.single":
+    "Αυτό το αντικείμενο ανήκει στον/στην {name}. Δεν μπορείς να διαγράψεις την εργασία άλλου χρήστη.",
+  "editor.ownership.multiple":
+    "Αυτά τα αντικείμενα ανήκουν στους/στις {names}. Δεν μπορείς να διαγράψεις την εργασία άλλου χρήστη.",
+  "editor.ownership.dismiss": "Κατανοητό",
   "editor.displayNameUpdated": "Το όνομα εμφάνισης ενημερώθηκε",
   "editor.imageAdded": "Η εικόνα προστέθηκε",
   "editor.imageAddError": "Δεν ήταν δυνατή η προσθήκη της εικόνας",

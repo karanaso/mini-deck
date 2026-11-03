@@ -51,6 +51,10 @@ vi.mock("@/components/editor/deck-provider", () => ({
   ),
 }));
 
+vi.mock("@/components/editor/deletion-guard", () => ({
+  DeletionGuardProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+
 vi.mock("@/components/editor/editor-workspace", () => ({
   EditorWorkspace: () => <div data-testid="editor-workspace" />,
 }));
