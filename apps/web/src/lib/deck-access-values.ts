@@ -1,8 +1,8 @@
 export interface DeckAccessValues {
   deckId: string;
   joinCode: string;
-  editPin: string;
-  viewPin: string;
+  editPin: string | null;
+  viewPin: string | null;
 }
 
 export const DECK_ACCESS_STORAGE_KEY = "mini-deck:deck-access";
@@ -21,18 +21,22 @@ function getStorage(storage?: StorageLike): StorageLike | null {
   }
 }
 
+function isPin(value: unknown): value is string {
+  return typeof value === "string" && PIN_PATTERN.test(value);
+}
+
 function isAccessValues(value: unknown): value is DeckAccessValues {
   if (!value || typeof value !== "object") return false;
   const entry = value as Record<string, unknown>;
+  const hasJoinCode =
+    typeof entry.joinCode === "string" && JOIN_CODE_PATTERN.test(entry.joinCode);
+  const bothOpen = entry.editPin === null && entry.viewPin === null;
+  const bothProtected = isPin(entry.editPin) && isPin(entry.viewPin);
   return (
     typeof entry.deckId === "string" &&
     entry.deckId.length > 0 &&
-    typeof entry.joinCode === "string" &&
-    JOIN_CODE_PATTERN.test(entry.joinCode) &&
-    typeof entry.editPin === "string" &&
-    PIN_PATTERN.test(entry.editPin) &&
-    typeof entry.viewPin === "string" &&
-    PIN_PATTERN.test(entry.viewPin)
+    hasJoinCode &&
+    (bothOpen || bothProtected)
   );
 }
 

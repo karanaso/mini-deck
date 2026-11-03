@@ -58,6 +58,8 @@ export function ShareDialog({
   const [error, setError] = useState<MessageKey | null>(null);
   const [resetArmed, setResetArmed] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const openAccess =
+    access !== null && access.editPin === null && access.viewPin === null;
 
   useEffect(() => {
     if (!open) {
@@ -186,7 +188,7 @@ export function ShareDialog({
                     {t("access.title")}
                   </p>
                 </div>
-                {access ? (
+                {access && access.editPin !== null && access.viewPin !== null ? (
                   <div className="space-y-1.5">
                     <AccessRow
                       label={t("access.joinCode")}
@@ -199,14 +201,14 @@ export function ShareDialog({
                       label={t("access.editPin")}
                       value={access.editPin}
                       copied={copied === "editPin"}
-                      onCopy={() => void copyValue("editPin", access.editPin)}
+                      onCopy={() => void copyValue("editPin", access.editPin as string)}
                       testId="share-edit-pin"
                     />
                     <AccessRow
                       label={t("access.viewPin")}
                       value={access.viewPin}
                       copied={copied === "viewPin"}
-                      onCopy={() => void copyValue("viewPin", access.viewPin)}
+                      onCopy={() => void copyValue("viewPin", access.viewPin as string)}
                       testId="share-view-pin"
                     />
                   </div>
@@ -258,12 +260,43 @@ export function ShareDialog({
                 )}
               </div>
             ) : null}
+
+            {!accessProtected ? (
+              <div className="space-y-2 border-t border-slate-100 pt-3">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-3.5 w-3.5 text-slate-600" />
+                  <p className="text-xs font-semibold text-slate-800">
+                    {t("access.title")}
+                  </p>
+                </div>
+                {openAccess && access ? (
+                  <AccessRow
+                    label={t("access.joinCode")}
+                    value={access.joinCode}
+                    copied={copied === "joinCode"}
+                    onCopy={() => void copyValue("joinCode", access.joinCode)}
+                    testId="share-join-code"
+                  />
+                ) : null}
+                <p className="text-xs leading-5 text-slate-600">
+                  {t("access.noPinsNote")}
+                </p>
+              </div>
+            ) : null}
           </div>
         )}
 
         <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>{t(accessProtected ? "share.warningProtected" : "share.warning")}</p>
+          <p>
+            {t(
+              accessProtected
+                ? "share.warningProtected"
+                : openAccess
+                  ? "share.warningOpen"
+                  : "share.warning",
+            )}
+          </p>
         </div>
       </DialogContent>
     </Dialog>

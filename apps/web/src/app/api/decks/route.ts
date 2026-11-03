@@ -12,6 +12,7 @@ import {
 } from "@mini-deck/deck";
 
 import { apiError, getClientIp, jsonResponse } from "@/server/api";
+import { createDeckBodySchema } from "@/server/access-validation";
 import { getDeckSessionSecret } from "@/server/auth";
 import { generateUniqueJoinCode } from "@/server/join-code";
 import { generateDeckPins, hashPin } from "@/server/pins";
@@ -29,16 +30,35 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
+  let payload: unknown = {};
+  const rawBody = await request.text();
+  if (rawBody.trim()) {
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return apiError(400, "invalid_request", "Expected a JSON request body");
+    }
+  }
+  const parsed = createDeckBodySchema.safeParse(payload);
+  if (!parsed.success) {
+    return apiError(
+      400,
+      "invalid_request",
+      "Expected an access mode of protected or open",
+    );
+  }
+  const { accessMode } = parsed.data;
+
   const deckId = createDeckId();
   const editToken = await generateEditToken();
   const viewToken = await deriveViewToken(editToken, deckId);
-  const { editPin, viewPin } = generateDeckPins();
+  const pins = accessMode === "protected" ? generateDeckPins() : null;
   const [editTokenHash, viewTokenHash, editPinHash, viewPinHash] =
     await Promise.all([
       hashToken(editToken),
       hashToken(viewToken),
-      hashPin(editPin),
-      hashPin(viewPin),
+      pins ? hashPin(pins.editPin) : Promise.resolve(null),
+      pins ? hashPin(pins.viewPin) : Promise.resolve(null),
     ]);
 
   const document = createInitialDeckDoc();
@@ -78,7 +98,7 @@ export async function POST(request: Request): Promise<Response> {
         joinCode,
         editPinHash,
         viewPinHash,
-        pinVersion: 1,
+        pinVersion: accessMode === "protected" ? 1 : 0,
         createdAt: now,
         updatedAt: now,
       });
@@ -101,7 +121,15 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   return jsonResponse(
-    { deckId, editToken, title, joinCode, editPin, viewPin },
+    {
+      deckId,
+      editToken,
+      title,
+      accessMode,
+      joinCode,
+      editPin: pins?.editPin ?? null,
+      viewPin: pins?.viewPin ?? null,
+    },
     { status: 201 },
   );
 }

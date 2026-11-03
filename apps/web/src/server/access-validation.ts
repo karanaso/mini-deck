@@ -6,6 +6,12 @@ export const pinBodySchema = z
   })
   .strict();
 
+export const createDeckBodySchema = z
+  .object({
+    accessMode: z.enum(["protected", "open"]).default("protected"),
+  })
+  .strict();
+
 export const joinLookupBodySchema = z
   .object({
     code: z.string().trim().regex(/^\d{7}$/u),
@@ -16,6 +22,6 @@ export const joinUnlockBodySchema = z
   .object({
     code: z.string().trim().regex(/^\d{7}$/u),
     role: z.enum(["editor", "viewer"]),
-    pin: z.string().trim().regex(/^\d{6}$/u),
+    pin: z.string().trim().regex(/^\d{6}$/u).optional(),
   })
   .strict();

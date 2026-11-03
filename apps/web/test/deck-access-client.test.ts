@@ -61,6 +61,26 @@ describe("local access values", () => {
     expect(readDeckAccessValues("deck-1", storage)).toBeNull();
   });
 
+  it("stores open-deck values without PINs", () => {
+    const storage = new MemoryStorage();
+    storeDeckAccessValues(
+      {
+        deckId: "deck-1",
+        joinCode: "0042719",
+        editPin: null,
+        viewPin: null,
+      },
+      storage,
+    );
+
+    expect(readDeckAccessValues("deck-1", storage)).toEqual({
+      deckId: "deck-1",
+      joinCode: "0042719",
+      editPin: null,
+      viewPin: null,
+    });
+  });
+
   it("ignores malformed stored values", () => {
     const storage = new MemoryStorage();
     storage.setItem(
@@ -68,6 +88,19 @@ describe("local access values", () => {
       JSON.stringify([{ deckId: "deck-1", joinCode: "123" }]),
     );
     expect(readDeckAccessValues("deck-1", storage)).toBeNull();
+
+    storage.setItem(
+      "mini-deck:deck-access",
+      JSON.stringify([
+        {
+          deckId: "deck-2",
+          joinCode: "0042719",
+          editPin: "004271",
+          viewPin: null,
+        },
+      ]),
+    );
+    expect(readDeckAccessValues("deck-2", storage)).toBeNull();
   });
 });
 
@@ -146,7 +179,11 @@ describe("deck access API helpers", () => {
       }
       if (url === "/api/join/lookup") {
         expect(JSON.parse(String(init?.body))).toEqual({ code: "0042719" });
-        return Response.json({ deckId: "deck-1", title: "Deck" });
+        return Response.json({
+          deckId: "deck-1",
+          title: "Deck",
+          protected: true,
+        });
       }
       if (url === "/api/join/unlock") {
         expect(JSON.parse(String(init?.body))).toEqual({
@@ -189,6 +226,7 @@ describe("deck access API helpers", () => {
     expect(await lookupJoinCode("0042719", fetchMock)).toEqual({
       deckId: "deck-1",
       title: "Deck",
+      protected: true,
     });
     expect(
       await unlockJoinCode("0042719", "viewer", "837204", fetchMock),
@@ -196,6 +234,29 @@ describe("deck access API helpers", () => {
     expect(await resetDeckAccess("deck-1", "session-token", fetchMock)).toMatchObject({
       joinCode: "7723104",
       unlockToken: "v1.new",
+    });
+  });
+
+  it("unlocks an open deck without sending a PIN", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) =>
+      Response.json({
+        deckId: "deck-1",
+        role: "editor",
+        title: "Deck",
+        protected: false,
+        unlockToken: "v1.open",
+        expiresAt: 10,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await unlockJoinCode("0042719", "editor", undefined, fetchMock)).toMatchObject({
+      role: "editor",
+      protected: false,
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      code: "0042719",
+      role: "editor",
     });
   });
 

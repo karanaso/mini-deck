@@ -16,20 +16,41 @@ Deck and session responses send `Cache-Control: no-store`, `Referrer-Policy: no-
 POST /api/decks
 ```
 
-No body or authentication is required. Rate limited per IP.
+No authentication is required. Rate limited per IP. The body is optional; `accessMode` is `"protected"` (default) or `"open"`.
+
+```json
+{ "accessMode": "open" }
+```
+
+A protected deck response:
 
 ```json
 {
   "deckId": "pfwqFFrwLL3sfRpWlOUD0",
   "editToken": "…",
   "title": "Untitled deck",
+  "accessMode": "protected",
   "joinCode": "0042719",
   "editPin": "004271",
   "viewPin": "837204"
 }
 ```
 
-`joinCode`, `editPin`, and `viewPin` are returned only by this creation response. Only salted PIN hashes are stored. Existing decks created before PIN support have no join code or PINs and remain link-only.
+An open deck receives the same join code and links but no role PINs:
+
+```json
+{
+  "deckId": "pfwqFFrwLL3sfRpWlOUD0",
+  "editToken": "…",
+  "title": "Untitled deck",
+  "accessMode": "open",
+  "joinCode": "0042719",
+  "editPin": null,
+  "viewPin": null
+}
+```
+
+`joinCode`, `editPin`, and `viewPin` are returned only by this creation response. Only salted PIN hashes are stored; open decks store `NULL` hashes and keep `pinVersion` at `0`. An unknown `accessMode` returns `400 invalid_request`. Existing decks created before PIN support have no join code or PINs and remain link-only.
 
 The view token is derived locally from the edit token:
 
@@ -47,8 +68,10 @@ Authorization: Bearer {token}
 Returns the role and current title. Edit and view tokens resolve to different roles. Unknown decks, unknown assets, and tampered tokens all return the same `404`.
 
 ```json
-{ "role": "editor", "title": "Untitled deck" }
+{ "role": "editor", "title": "Untitled deck", "protected": true }
 ```
+
+A deck without PINs — an open deck or a legacy link-only deck — returns `protected: false` and accepts the raw link token directly.
 
 For a PIN-protected deck without a valid unlock session, the link token returns:
 
@@ -97,10 +120,14 @@ Content-Type: application/json
 { "code": "0042719" }
 ```
 
-A valid code returns the deck ID and title. An unknown code returns the generic `404`. Lookup is rate-limited per client and per code.
+A valid code returns the deck ID, title, and whether the deck requires a PIN. An unknown code returns the generic `404`. Lookup is rate-limited per client and per code.
 
 ```json
-{ "deckId": "pfwqFFrwLL3sfRpWlOUD0", "title": "Untitled deck" }
+{
+  "deckId": "pfwqFFrwLL3sfRpWlOUD0",
+  "title": "Untitled deck",
+  "protected": true
+}
 ```
 
 ```http
@@ -112,7 +139,13 @@ Content-Type: application/json
 { "code": "0042719", "role": "viewer", "pin": "837204" }
 ```
 
-Returns the same unlock payload as the link unlock route. No deck content is available before this succeeds.
+For an open deck (`protected: false` from lookup), omit `pin`; the chosen role is granted directly:
+
+```json
+{ "code": "0042719", "role": "viewer" }
+```
+
+A protected deck rejects a missing PIN with `400 invalid_request`. Returns the same unlock payload as the link unlock route, with `protected` reflecting the deck. No deck content is available before this succeeds.
 
 ## Reset deck access
 
@@ -121,7 +154,7 @@ POST /api/decks/{deckId}/access/reset
 Authorization: Bearer {editorUnlockToken}
 ```
 
-Requires an edit unlock session. Generates and returns a new join code and two PINs, increments the deck's PIN version, and returns a fresh edit unlock session. Old codes, PINs, and unlock sessions stop working immediately.
+Requires a protected deck and an edit session. Generates and returns a new join code and two PINs, increments the deck's PIN version, and returns a fresh edit unlock session. Old codes, PINs, and unlock sessions stop working immediately. An open deck has no PINs to reset and returns `400 pins_not_configured` without changing its join code or links.
 
 ```json
 {

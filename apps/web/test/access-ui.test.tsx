@@ -99,6 +99,26 @@ describe("DeckCreatedDialog", () => {
     expect(onOpenEditor).toHaveBeenCalledTimes(1);
   });
 
+  it("shows only the join code for an open deck", () => {
+    render(
+      withLocale(
+        <DeckCreatedDialog
+          open
+          onOpenChange={vi.fn()}
+          values={{ ...access, editPin: null, viewPin: null }}
+          onOpenEditor={vi.fn()}
+        />,
+      ),
+    );
+
+    expect(screen.getByTestId("created-join-code")).toHaveTextContent("0042719");
+    expect(screen.queryByTestId("created-edit-pin")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("created-view-pin")).not.toBeInTheDocument();
+    expect(screen.getByTestId("deck-created-dialog")).toHaveTextContent(
+      "no PINs are required",
+    );
+  });
+
   it("still opens when clipboard copying fails", async () => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -148,6 +168,36 @@ describe("JoinDeckDialog", () => {
 
     expect(unlockJoinMock).toHaveBeenCalledWith("0042719", "viewer", "837204");
     expect(readUnlockSession("deck-1")?.token).toBe("v1.view");
+    expect(navigate).toHaveBeenCalledWith("/d/deck-1");
+  });
+
+  it("joins an open deck without asking for a PIN", async () => {
+    lookupMock.mockResolvedValue({
+      deckId: "deck-1",
+      title: "Open plan",
+      protected: false,
+    });
+    unlockJoinMock.mockResolvedValue({
+      deckId: "deck-1",
+      role: "editor",
+      title: "Open plan",
+      protected: false,
+      unlockToken: "v1.open",
+      expiresAt: Date.now() + 60_000,
+    });
+    const navigate = vi.fn();
+    const user = userEvent.setup();
+    render(withLocale(<JoinDeckDialog open onOpenChange={vi.fn()} navigate={navigate} />));
+
+    await user.type(screen.getByTestId("join-code-input"), "0042719");
+    await user.click(screen.getByTestId("join-code-submit"));
+    await user.click(await screen.findByTestId("join-role-edit"));
+
+    await waitFor(() =>
+      expect(unlockJoinMock).toHaveBeenCalledWith("0042719", "editor"),
+    );
+    expect(screen.queryByTestId("join-pin-input")).not.toBeInTheDocument();
+    expect(readUnlockSession("deck-1")?.token).toBe("v1.open");
     expect(navigate).toHaveBeenCalledWith("/d/deck-1");
   });
 
@@ -266,6 +316,58 @@ describe("ShareDialog access values", () => {
     expect(screen.getByTestId("share-join-code")).toHaveTextContent("0042719");
     expect(screen.getByTestId("share-edit-pin")).toHaveTextContent("004271");
     expect(screen.getByTestId("share-view-pin")).toHaveTextContent("837204");
+  });
+
+  it("shows the join code without PINs or reset for an open deck", async () => {
+    storeDeckAccessValues({
+      deckId: "deck-1",
+      joinCode: "0042719",
+      editPin: null,
+      viewPin: null,
+    });
+    render(
+      withLocale(
+        <ShareDialog
+          open
+          onOpenChange={vi.fn()}
+          deckId="deck-1"
+          linkToken="edit-token"
+          sessionToken="v1.session"
+          accessProtected={false}
+        />,
+      ),
+    );
+
+    expect(await screen.findByTestId("share-join-code")).toHaveTextContent(
+      "0042719",
+    );
+    expect(screen.queryByTestId("share-edit-pin")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("share-view-pin")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("reset-access")).not.toBeInTheDocument();
+    expect(screen.getByTestId("share-dialog")).toHaveTextContent(
+      "This deck is open",
+    );
+  });
+
+  it("states that there are no PINs without local values", () => {
+    render(
+      withLocale(
+        <ShareDialog
+          open
+          onOpenChange={vi.fn()}
+          deckId="deck-1"
+          linkToken={null}
+          sessionToken="v1.session"
+          accessProtected={false}
+        />,
+      ),
+    );
+
+    expect(screen.getByTestId("share-dialog")).toHaveTextContent(
+      "This deck has no PINs",
+    );
+    expect(screen.queryByTestId("share-join-code")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("reset-access")).not.toBeInTheDocument();
   });
 
   it("resets access and stores the new values", async () => {

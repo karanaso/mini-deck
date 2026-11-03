@@ -29,6 +29,8 @@ export function DeckCreatedDialog({
 }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState<CopyTarget | null>(null);
+  const openAccess =
+    values !== null && values.editPin === null && values.viewPin === null;
 
   async function copy(target: CopyTarget, value: string) {
     try {
@@ -57,7 +59,13 @@ export function DeckCreatedDialog({
             </span>
             <DialogTitle>{t("access.created.title")}</DialogTitle>
           </div>
-          <DialogDescription>{t("access.created.description")}</DialogDescription>
+          <DialogDescription>
+            {t(
+              openAccess
+                ? "access.created.openDescription"
+                : "access.created.description",
+            )}
+          </DialogDescription>
         </DialogHeader>
 
         {values ? (
@@ -69,26 +77,36 @@ export function DeckCreatedDialog({
               onCopy={() => void copy("joinCode", values.joinCode)}
               testId="created-join-code"
             />
-            <AccessRow
-              label={t("access.editPin")}
-              value={values.editPin}
-              copied={copied === "editPin"}
-              onCopy={() => void copy("editPin", values.editPin)}
-              testId="created-edit-pin"
-            />
-            <AccessRow
-              label={t("access.viewPin")}
-              value={values.viewPin}
-              copied={copied === "viewPin"}
-              onCopy={() => void copy("viewPin", values.viewPin)}
-              testId="created-view-pin"
-            />
+            {values.editPin !== null && values.viewPin !== null ? (
+              <>
+                <AccessRow
+                  label={t("access.editPin")}
+                  value={values.editPin}
+                  copied={copied === "editPin"}
+                  onCopy={() => void copy("editPin", values.editPin as string)}
+                  testId="created-edit-pin"
+                />
+                <AccessRow
+                  label={t("access.viewPin")}
+                  value={values.viewPin}
+                  copied={copied === "viewPin"}
+                  onCopy={() => void copy("viewPin", values.viewPin as string)}
+                  testId="created-view-pin"
+                />
+              </>
+            ) : null}
           </div>
         ) : null}
 
         <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>{t("access.created.warning")}</p>
+          <p>
+            {t(
+              openAccess
+                ? "access.created.openWarning"
+                : "access.created.warning",
+            )}
+          </p>
         </div>
 
         <Button type="button" onClick={onOpenEditor} data-testid="created-open-editor">

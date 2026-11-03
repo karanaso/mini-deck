@@ -15,6 +15,25 @@ export interface TestDeck {
   title: string;
 }
 
+export interface OpenTestDeck {
+  deckId: string;
+  editToken: string;
+  viewToken: string;
+  joinCode: string;
+  title: string;
+}
+
+function createDeckRequest(ip: string, body?: unknown): Request {
+  return new Request("http://localhost/api/decks", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-forwarded-for": ip,
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
 export function params<T extends Record<string, string>>(
   value: T,
 ): { params: Promise<T> } {
@@ -22,12 +41,7 @@ export function params<T extends Record<string, string>>(
 }
 
 export async function createProtectedDeck(ip = "127.0.0.1"): Promise<TestDeck> {
-  const response = await createDeckRoute(
-    new Request("http://localhost/api/decks", {
-      method: "POST",
-      headers: { "x-forwarded-for": ip },
-    }),
-  );
+  const response = await createDeckRoute(createDeckRequest(ip));
   expect(response.status).toBe(201);
   const data = (await response.json()) as {
     deckId: string;
@@ -40,6 +54,32 @@ export async function createProtectedDeck(ip = "127.0.0.1"): Promise<TestDeck> {
   return {
     ...data,
     viewToken: await deriveViewToken(data.editToken, data.deckId),
+  };
+}
+
+export async function createOpenDeck(ip = "127.0.0.1"): Promise<OpenTestDeck> {
+  const response = await createDeckRoute(
+    createDeckRequest(ip, { accessMode: "open" }),
+  );
+  expect(response.status).toBe(201);
+  const data = (await response.json()) as {
+    deckId: string;
+    editToken: string;
+    title: string;
+    accessMode: "open";
+    joinCode: string;
+    editPin: null;
+    viewPin: null;
+  };
+  expect(data.accessMode).toBe("open");
+  expect(data.editPin).toBeNull();
+  expect(data.viewPin).toBeNull();
+  return {
+    deckId: data.deckId,
+    editToken: data.editToken,
+    viewToken: await deriveViewToken(data.editToken, data.deckId),
+    joinCode: data.joinCode,
+    title: data.title,
   };
 }
 

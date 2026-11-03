@@ -29,6 +29,7 @@ const enMessages = {
   "landing.create": "New deck",
   "landing.creating": "Creating…",
   "landing.createHint": "Starts blank. Opens instantly.",
+  "landing.openDeck": "Open deck (no PINs)",
   "landing.mockup.editing.one": "{count} editing",
   "landing.mockup.editing.other": "{count} editing",
   "landing.mockup.eyebrow": "Product direction",
@@ -322,6 +323,10 @@ const enMessages = {
   "access.created.title": "Deck created",
   "access.created.description":
     "Save these values now. You will need them to open the deck from another browser.",
+  "access.created.openDescription":
+    "This deck is open. Share either link or the join code — no PINs are required.",
+  "access.created.openWarning":
+    "Anyone with a link or the join code can open and edit this deck without signing in. Open decks cannot be made PIN-protected later.",
   "access.created.warning":
     "Anyone with the join code or a link and the matching PIN can open this deck. Share the link/code and PIN separately. If you lose all three values and every remembered browser session, an editor can reset them only from an unlocked session.",
   "access.created.openEditor": "Open editor",
@@ -332,6 +337,8 @@ const enMessages = {
   "access.copyValue": "Copy {label}",
   "access.unknown":
     "These values are stored only on the browser that created the deck. Reset access to generate a new join code and PINs.",
+  "access.noPinsNote":
+    "This deck has no PINs. Share either link; anyone with a link can open it.",
   "access.reset.action": "Reset access",
   "access.reset.warning":
     "This generates a new join code and PINs, invalidates all current sessions, and signs collaborators out. Continue?",
@@ -353,6 +360,8 @@ const enMessages = {
     "Anyone with a link can access the deck without signing in. Edit links are bearer secrets and cannot be revoked in this version — share them carefully.",
   "share.warningProtected":
     "A link or join code plus its role PIN is required. Anyone holding both can open the deck without an account.",
+  "share.warningOpen":
+    "This deck is open. Anyone with a link or the join code can open it without a PIN or an account. Share links carefully.",
   "share.linksUnavailable":
     "This editor session was opened with a join code, so the original links are not available on this browser. Share the code and PINs below instead.",
   "share.editUrlLabel": "Edit link URL",
