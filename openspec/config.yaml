@@ -1,32 +1,28 @@
 schema: spec-driven
 
-# Project context (optional)
-# Add only constraints that should guide OpenSpec artifacts and workflows.
-# Include constraints an agent cannot infer by reading the code.
-# Keep general project documentation and discoverable codebase facts out.
-# Example:
-#   context: |
-#     Designs and tasks must cover Windows, macOS, and Linux
-#     Write all artifacts in Spanish
+# Project context: constraints that guide all OpenSpec artifacts and workflows.
+context: |
+  Every change must include automated tests for new or changed behavior.
+  Put test work in the same task group as the implementation it covers.
+  Never mark a task complete until its verification command passes.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always state what is out of scope
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+# Per-artifact rules.
+rules:
+  tasks:
+    - Include test tasks in the same group as the implementation they cover.
+    - Each task must name a concrete verification command, test, or observable result.
+    - Include a final integration task for lint, typecheck, and the relevant test suites.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+# Per-operation guidance returned by `openspec instructions apply|archive --json`.
+operations:
+  apply:
+    guidance:
+      - Work on a branch named opsx/<change-name>; never commit directly to main.
+      - Run the relevant tests before committing and do not mark a task complete while its verification fails.
+      - After tests pass, commit and push the branch, then open a pull request.
+      - Merge the pull request once required checks pass; if review approval is required, wait for the user.
+      - Report the PR URL and the verification commands in the final summary.
+  archive:
+    guidance:
+      - Archive only after the change's pull request has been merged.
+      - Update the default branch before moving the change directory.
