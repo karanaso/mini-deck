@@ -90,10 +90,10 @@ The Compose file publishes only port `8080`. The web app, collaboration server, 
 | `IMAGE_SEARCH_RATE_LIMIT` | Stock image searches per minute per IP | `60` |
 | `IMAGE_IMPORT_RATE_LIMIT` | Stock image imports per minute per IP | `30` |
 | `DECK_SESSION_SECRET` | Signs 30-day unlock sessions; required in production (32+ chars), shared by web and collab | dev fallback |
-| `JOIN_LOOKUP_RATE_LIMIT` | Join-code lookups per 15 minutes per IP | `20` |
-| `JOIN_CODE_ATTEMPT_RATE_LIMIT` | Join-code attempts per 15 minutes per code | `50` |
-| `PIN_ATTEMPT_RATE_LIMIT` | PIN attempts per 15 minutes per IP | `10` |
-| `PIN_DECK_ATTEMPT_RATE_LIMIT` | PIN attempts per 15 minutes per deck | `50` |
+| `JOIN_LOOKUP_RATE_LIMIT` | Join-code lookups per minute per IP | `1000` |
+| `JOIN_CODE_ATTEMPT_RATE_LIMIT` | Join-code attempts per minute per code | `1000` |
+| `PIN_ATTEMPT_RATE_LIMIT` | PIN attempts per minute per IP | `1000` |
+| `PIN_DECK_ATTEMPT_RATE_LIMIT` | PIN attempts per minute per deck | `1000` |
 | `UNSPLASH_ACCESS_KEY` | Unsplash Access Key; enables Unsplash search when set | unset |
 | `PEXELS_API_KEY` | Pexels API key; enables Pexels search when set | unset |
 

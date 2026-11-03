@@ -43,19 +43,19 @@ function createLimiters(): void {
   });
   pinAttemptLimiter = new RateLimiter({
     capacity: env.PIN_ATTEMPT_RATE_LIMIT,
-    refillPerSecond: env.PIN_ATTEMPT_RATE_LIMIT / (15 * 60),
+    refillPerSecond: env.PIN_ATTEMPT_RATE_LIMIT / 60,
   });
   pinDeckAttemptLimiter = new RateLimiter({
     capacity: env.PIN_DECK_ATTEMPT_RATE_LIMIT,
-    refillPerSecond: env.PIN_DECK_ATTEMPT_RATE_LIMIT / (15 * 60),
+    refillPerSecond: env.PIN_DECK_ATTEMPT_RATE_LIMIT / 60,
   });
   joinLookupLimiter = new RateLimiter({
     capacity: env.JOIN_LOOKUP_RATE_LIMIT,
-    refillPerSecond: env.JOIN_LOOKUP_RATE_LIMIT / (15 * 60),
+    refillPerSecond: env.JOIN_LOOKUP_RATE_LIMIT / 60,
   });
   joinCodeAttemptLimiter = new RateLimiter({
     capacity: env.JOIN_CODE_ATTEMPT_RATE_LIMIT,
-    refillPerSecond: env.JOIN_CODE_ATTEMPT_RATE_LIMIT / (15 * 60),
+    refillPerSecond: env.JOIN_CODE_ATTEMPT_RATE_LIMIT / 60,
   });
 }
 

@@ -22,6 +22,31 @@ describe("rate limiter", () => {
     expect(limiter.take("ip").allowed).toBe(false);
   });
 
+  it("accepts 1000 attempts and refills within a minute", () => {
+    let now = 0;
+    const limiter = new RateLimiter({
+      capacity: 1000,
+      refillPerSecond: 1000 / 60,
+      now: () => now,
+    });
+
+    for (let attempt = 0; attempt < 1000; attempt += 1) {
+      expect(limiter.take("ip").allowed).toBe(true);
+    }
+
+    const rejected = limiter.take("ip");
+    expect(rejected.allowed).toBe(false);
+    expect(rejected.retryAfterMs).toBeGreaterThan(0);
+
+    now = 60_000;
+
+    for (let attempt = 0; attempt < 1000; attempt += 1) {
+      expect(limiter.take("ip").allowed).toBe(true);
+    }
+
+    expect(limiter.take("ip").allowed).toBe(false);
+  });
+
   it("keeps keys independent and supports reset", () => {
     const now = 0;
     const limiter = new RateLimiter({

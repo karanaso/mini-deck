@@ -222,6 +222,7 @@ describe("session and unlock", () => {
       "10.0.0.5",
     );
     expect(second.status).toBe(429);
+    expect(second.headers.get("retry-after")).toBeTruthy();
   });
 });
 

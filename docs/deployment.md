@@ -37,12 +37,14 @@ The collaboration service must be a single long-lived instance in v1. Do not dep
 | `IMAGE_SEARCH_RATE_LIMIT` | no | Per-IP stock image searches/minute (default 60) |
 | `IMAGE_IMPORT_RATE_LIMIT` | no | Per-IP stock image imports/minute (default 30) |
 | `DECK_SESSION_SECRET` | yes in production | 32+ character signing key for 30-day unlock sessions; identical on web and collab |
-| `JOIN_LOOKUP_RATE_LIMIT` | no | Join-code lookups per 15 minutes per IP (default 20) |
-| `JOIN_CODE_ATTEMPT_RATE_LIMIT` | no | Join-code attempts per 15 minutes per code (default 50) |
-| `PIN_ATTEMPT_RATE_LIMIT` | no | PIN attempts per 15 minutes per IP (default 10) |
-| `PIN_DECK_ATTEMPT_RATE_LIMIT` | no | PIN attempts per 15 minutes per deck (default 50) |
+| `JOIN_LOOKUP_RATE_LIMIT` | no | Join-code lookups per minute per IP (default 1000) |
+| `JOIN_CODE_ATTEMPT_RATE_LIMIT` | no | Join-code attempts per minute per code (default 1000) |
+| `PIN_ATTEMPT_RATE_LIMIT` | no | PIN attempts per minute per IP (default 1000) |
+| `PIN_DECK_ATTEMPT_RATE_LIMIT` | no | PIN attempts per minute per deck (default 1000) |
 | `UNSPLASH_ACCESS_KEY` | no | Enables Unsplash search; keep it server-side only |
 | `PEXELS_API_KEY` | no | Enables Pexels search; keep it server-side only |
+
+> **Security note:** the default join and PIN limits allow 1000 attempts per minute per IP, code, and deck. That weakens brute-force protection for six-digit PINs: an attacker can exhaust the 1,000,000-value space against one deck in roughly 17 hours of sustained traffic. Deployments that protect high-value decks should override `PIN_ATTEMPT_RATE_LIMIT`, `PIN_DECK_ATTEMPT_RATE_LIMIT`, `JOIN_LOOKUP_RATE_LIMIT`, and `JOIN_CODE_ATTEMPT_RATE_LIMIT` with lower values.
 
 Because `NEXT_PUBLIC_COLLAB_WS_URL` is embedded in the browser bundle, rebuild the web image when it changes. The web proxy CSP also reads it at runtime, so keep the runtime value aligned.
 
