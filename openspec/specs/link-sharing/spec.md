@@ -75,7 +75,7 @@ The system SHALL reject unknown deck identifiers and invalid tokens with a not-f
 
 ### Requirement: Provide a share dialog
 
-The system SHALL give editors a share dialog that displays the available edit/view links, the join code, and the role PINs on a browser that holds them, with copy actions. For a session opened by join code, the dialog MUST show the code and PINs instead of links it cannot recover. It MUST offer an editor-only access reset and warn that anyone holding a link or code plus its PIN can use it without signing in.
+The system SHALL give editors a share dialog that displays the available edit/view links and, when available on that browser, the join code and role PINs, with copy actions. For a protected deck, the dialog MUST offer an editor-only access reset and warn that anyone holding a link or code plus its PIN can use it without signing in. For an open deck, the dialog MUST show that no PINs are required, MUST display the join code when the browser knows it, and MUST NOT offer an access reset.
 
 #### Scenario: Copy the view link
 
@@ -86,7 +86,7 @@ The system SHALL give editors a share dialog that displays the available edit/vi
 #### Scenario: Copy the edit link
 
 - **WHEN** an editor copies the edit link and sends it to a collaborator
-- **THEN** the collaborator can open the deck with editing enabled after entering the edit PIN
+- **THEN** the collaborator can open the deck with editing enabled after entering the edit PIN when the deck is protected
 
 #### Scenario: Copy the join code
 
@@ -97,13 +97,20 @@ The system SHALL give editors a share dialog that displays the available edit/vi
 #### Scenario: Code-joined editor shares access
 
 - **WHEN** an editor joined using the join code and opens the share dialog
-- **THEN** the dialog shows the join code and PINs
+- **THEN** the dialog shows the join code and PINs for a protected deck
 - **AND** it does not claim that the original links are available on that browser
 
 #### Scenario: Share warning is visible
 
 - **WHEN** the share dialog is open for a PIN-protected deck
 - **THEN** it states that a link or join code plus its role PIN is required and that anyone holding both can access the deck without an account
+
+#### Scenario: Open deck share dialog
+
+- **WHEN** an editor opens the share dialog for an open deck
+- **THEN** the dialog shows the edit and view links
+- **AND** it shows the join code when this browser knows it
+- **AND** it does not show PIN fields or an access reset action
 
 ### Requirement: Protect link capabilities
 
@@ -171,14 +178,21 @@ The recent-decks list SHALL be stored locally on the device and MUST NOT be expo
 
 ### Requirement: Create deck access values
 
-Every newly created deck SHALL receive a unique seven-digit join code, a random six-digit edit PIN, and a random six-digit view PIN. Values MUST come from a cryptographically secure source, MAY begin with zero, and the two PINs MUST differ. The creator MUST be shown all three once at creation, and role PINs MUST be stored only as salted hashes.
+Every newly created protected deck SHALL receive a unique seven-digit join code, a random six-digit edit PIN, and a random six-digit view PIN. A deck created in open mode SHALL receive a unique seven-digit join code but MUST NOT receive role PINs. Values MUST come from a cryptographically secure source and MAY begin with zero; when PINs are generated they MUST differ. The creator MUST be shown the join code once, plus both PINs once when the deck is protected, and role PINs MUST be stored only as salted hashes.
 
 #### Scenario: Create a protected deck
 
-- **WHEN** a visitor creates a new deck
+- **WHEN** a visitor creates a new deck in the default protected mode
 - **THEN** the system assigns a seven-digit join code, a six-digit edit PIN, and a six-digit view PIN
 - **AND** all three values are shown once in the creation flow
 - **AND** neither PIN is stored in plaintext on the server
+
+#### Scenario: Create an open deck
+
+- **WHEN** a visitor creates a new deck in open mode
+- **THEN** the system assigns a seven-digit join code
+- **AND** no edit PIN, view PIN, or PIN hash is created
+- **AND** the creation flow shows the join code and does not show PIN values
 
 #### Scenario: Join code is unique
 
@@ -198,7 +212,7 @@ Every newly created deck SHALL receive a unique seven-digit join code, a random 
 
 ### Requirement: Find a deck by join code
 
-The landing page SHALL let a visitor enter a seven-digit join code. A valid code MUST resolve to the deck and show its title, then offer Edit and View as role choices before any role PIN is entered. An unknown code MUST show the generic not-found state without revealing whether a deck exists.
+The landing page SHALL let a visitor enter a seven-digit join code. A valid code MUST resolve to the deck and show its title, then offer Edit and View as role choices. For a protected deck, the chosen role PIN MUST be requested before loading deck content. For an open deck, choosing a role MUST open the deck with that role without asking for a PIN. An unknown code MUST show the generic not-found state without revealing whether a deck exists.
 
 #### Scenario: Valid code finds the deck
 
@@ -214,13 +228,19 @@ The landing page SHALL let a visitor enter a seven-digit join code. A valid code
 
 #### Scenario: Role choice comes before the PIN
 
-- **WHEN** a visitor chooses View after a valid code lookup
+- **WHEN** a visitor chooses View after a valid code lookup for a protected deck
 - **THEN** the view PIN is requested
 - **AND** the deck is not loaded before that PIN succeeds
 
+#### Scenario: Open deck skips the PIN
+
+- **WHEN** a visitor chooses Edit or View after a valid code lookup for an open deck
+- **THEN** the deck opens with the chosen role
+- **AND** no PIN input is requested
+
 ### Requirement: Unlock a protected deck
 
-Opening a PIN-protected deck link, or choosing a role after a join-code lookup, SHALL ask for the PIN matching that role before loading deck content, editor controls, or live collaboration. A correct PIN MUST create an unlock session; a wrong PIN MUST reveal no deck content and MUST show a generic invalid-PIN message.
+Opening a PIN-protected deck link, or choosing a role after a join-code lookup for a protected deck, SHALL ask for the PIN matching that role before loading deck content, editor controls, or live collaboration. A correct PIN MUST create an unlock session; a wrong PIN MUST reveal no deck content and MUST show a generic invalid-PIN message. An open deck MUST NOT ask for a PIN.
 
 #### Scenario: Edit link asks for the edit PIN
 
@@ -234,8 +254,13 @@ Opening a PIN-protected deck link, or choosing a role after a join-code lookup, 
 
 #### Scenario: Join code asks for the chosen role PIN
 
-- **WHEN** a participant chooses Edit or View after a valid join-code lookup
+- **WHEN** a participant chooses Edit or View after a valid join-code lookup for a protected deck
 - **THEN** the PIN for that role is requested
+
+#### Scenario: Open deck loads without a PIN
+
+- **WHEN** a participant opens an open deck's edit or view link
+- **THEN** the deck opens with that link's role without a PIN prompt or unlock session
 
 #### Scenario: Correct PIN opens the deck
 
@@ -310,7 +335,7 @@ For a PIN-protected deck, a raw edit or view link token alone MUST NOT authorize
 
 ### Requirement: Manage and reset access
 
-The share dialog SHALL show the deck's join code and PINs on a browser that holds them, with a copy action for each. An editor with a valid unlock session SHALL be able to reset all three values; the reset MUST create a new join code and two new PINs, invalidate the previous values, and invalidate existing unlock sessions.
+The share dialog SHALL show a protected deck's join code and PINs on a browser that holds them, with a copy action for each. An editor with a valid unlock session SHALL be able to reset all three values for a protected deck; the reset MUST create a new join code and two new PINs, invalidate the previous values, and invalidate existing unlock sessions. An open deck has no PINs and MUST NOT offer or accept an access reset.
 
 #### Scenario: Copy access values
 
@@ -319,7 +344,7 @@ The share dialog SHALL show the deck's join code and PINs on a browser that hold
 
 #### Scenario: Reset access
 
-- **WHEN** an unlocked editor confirms an access reset
+- **WHEN** an unlocked editor confirms an access reset on a protected deck
 - **THEN** a new seven-digit join code and two new six-digit PINs are generated and displayed
 - **AND** the old code, old PINs, and old unlock sessions no longer work
 
@@ -327,6 +352,12 @@ The share dialog SHALL show the deck's join code and PINs on a browser that hold
 
 - **WHEN** a participant with a view-only session opens the share dialog
 - **THEN** no access reset action is available
+
+#### Scenario: Open deck cannot reset
+
+- **WHEN** an editor requests an access reset for an open deck
+- **THEN** the request is rejected because the deck has no PIN access
+- **AND** its links and join code remain unchanged
 
 ### Requirement: Limit join and PIN attempts
 
@@ -367,19 +398,25 @@ The system SHALL rate-limit join-code lookups and PIN attempts per client, and r
 
 ### Requirement: Keep existing decks link-only
 
-Decks created before this change MUST continue to open through their existing edit and view links without a join code, PIN prompt, migration, or schema-version change. Every deck created after this change MUST receive a join code and both role PINs.
+Decks created before PIN support MUST continue to open through their existing edit and view links without a join code, PIN prompt, migration, or schema-version change. Every deck created after this change MUST receive a join code and either both role PINs or no PINs, depending on the access mode chosen at creation.
 
 #### Scenario: Existing edit link opens directly
 
-- **WHEN** a participant opens an edit link for a deck created before this change
+- **WHEN** a participant opens an edit link for a deck created before PIN support
 - **THEN** the editor opens without a PIN prompt
 
 #### Scenario: Existing view link opens directly
 
-- **WHEN** a participant opens a view link for a deck created before this change
+- **WHEN** a participant opens a view link for a deck created before PIN support
 - **THEN** the deck opens read-only without a PIN prompt
 
 #### Scenario: Existing deck has no join code
 
-- **WHEN** a visitor tries the previous deck's identifier as a join code
+- **WHEN** a visitor tries a deck created before PIN support by its identifier as a join code
 - **THEN** no join-code lookup succeeds for that legacy deck
+
+#### Scenario: Open deck remains link-only
+
+- **WHEN** a participant opens an open deck's edit or view link without a remembered session
+- **THEN** the deck opens with that link's role without a PIN prompt
+
