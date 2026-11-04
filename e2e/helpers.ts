@@ -55,6 +55,13 @@ export interface DeckLink extends DeckAccess {
   editToken: string;
 }
 
+export interface OpenDeckLink {
+  url: string;
+  deckId: string;
+  editToken: string;
+  joinCode: string;
+}
+
 export async function createDeck(page: Page): Promise<DeckLink> {
   await page.goto("/", { waitUntil: "networkidle" });
   const locale: InterfaceLocale =
@@ -80,6 +87,33 @@ export async function createDeck(page: Page): Promise<DeckLink> {
 
   await waitForDeckReady(page, "editor", locale);
   return { url, deckId, editToken: match[2], joinCode, editPin, viewPin };
+}
+
+export async function createOpenDeck(page: Page): Promise<OpenDeckLink> {
+  await page.goto("/", { waitUntil: "networkidle" });
+  const locale: InterfaceLocale =
+    (await page.locator("html").getAttribute("lang")) === "el" ? "el" : "en";
+  await page.getByTestId("create-open-deck").check();
+  await page.getByRole(
+    "button",
+    { name: locale === "el" ? "Νέο deck" : "New deck" },
+  ).click();
+
+  const dialog = page.getByTestId("deck-created-dialog");
+  await expect(dialog).toBeVisible();
+  const joinCode = (await page.getByTestId("created-join-code").innerText()).trim();
+  await expect(page.getByTestId("created-edit-pin")).toHaveCount(0);
+  await expect(page.getByTestId("created-view-pin")).toHaveCount(0);
+  await page.getByTestId("created-open-editor").click();
+
+  await page.waitForURL(/\/d\/[^#]+#/, { timeout: 15_000 });
+  const url = page.url();
+  const match = url.match(/\/d\/([^#]+)#(.+)$/);
+  if (!match) throw new Error(`Unexpected deck URL: ${url}`);
+  const [deckId, editToken] = [match[1], match[2]];
+
+  await waitForDeckReady(page, "editor", locale);
+  return { url, deckId, editToken, joinCode };
 }
 
 export async function waitForDeckReady(

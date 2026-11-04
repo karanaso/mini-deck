@@ -99,9 +99,11 @@ The Compose file publishes only port `8080`. The web app, collaboration server, 
 
 ## Deck access
 
-New decks receive a seven-digit join code and two six-digit role PINs: one for editing and one for read-only viewing. The creation flow shows all three once and keeps them in that browser. A protected deck can be opened from the landing page by join code or through its edit/view link, but the matching role PIN is required before content loads. Unlocks are remembered for 30 days in that browser.
+Deck creation offers two access modes. **Protected** decks (the default) receive a seven-digit join code and two six-digit role PINs: one for editing and one for read-only viewing. The creation flow shows all three once and keeps them in that browser. A protected deck can be opened from the landing page by join code or through its edit/view link, but the matching role PIN is required before content loads. Unlocks are remembered for 30 days in that browser.
 
-The share dialog shows the code and PINs on a browser that holds them and lets an editor reset all three values. Resetting invalidates old values and existing unlock sessions. Existing decks keep their link-only behavior and have no join code or PINs.
+**Open** decks are created with the "Open deck (no PINs)" toggle on the landing page. They still receive a join code and role-scoped edit/view links, but no PINs: an edit link opens the editor, a view link opens read-only, and joining by code skips the PIN step. Open decks cannot be made PIN-protected later.
+
+The share dialog shows the code and PINs on a browser that holds them and lets an editor reset all three values for a protected deck. Resetting invalidates old values and existing unlock sessions. Open decks show their join code and links but offer no reset. Existing decks keep their link-only behavior and have no join code or PINs.
 
 Set `DECK_SESSION_SECRET` to the same 32+ character value on the web and collaboration services in production. Development uses a dev-only fallback. See `docs/sharing.md`, `docs/api.md`, and `docs/deployment.md` for the flow, routes, and deploy order.
 

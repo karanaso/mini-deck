@@ -3,6 +3,7 @@ import { joinUnlockBodySchema } from "@/server/access-validation";
 import {
   findDeckByJoinCode,
   getDeckSessionSecret,
+  isProtectedDeck,
   issueDeckSession,
   verifyDeckPin,
 } from "@/server/auth";
@@ -50,21 +51,32 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const deck = await findDeckByJoinCode(parsed.data.code);
-  if (!deck || !deck.editPinHash || !deck.viewPinHash) {
+  if (!deck) {
     return apiError(404, "not_found", "Deck not found");
   }
 
-  const pinLimit = getPinAttemptLimiter().take(ip);
-  const deckLimit = getPinDeckAttemptLimiter().take(deck.id);
-  const retryAfterMs = Math.max(pinLimit.retryAfterMs, deckLimit.retryAfterMs);
-  if (!pinLimit.allowed || !deckLimit.allowed) {
-    return apiError(429, "rate_limited", "Too many PIN attempts. Try again shortly.", {
-      headers: { "Retry-After": String(Math.max(1, Math.ceil(retryAfterMs / 1000))) },
-    });
-  }
+  const protectedDeck = isProtectedDeck(deck);
+  if (protectedDeck) {
+    if (!parsed.data.pin) {
+      return apiError(
+        400,
+        "invalid_request",
+        "Enter a seven-digit code, a role, and a six-digit PIN",
+      );
+    }
 
-  if (!(await verifyDeckPin(deck.id, parsed.data.role, parsed.data.pin))) {
-    return apiError(401, "invalid_pin", "That PIN is not valid");
+    const pinLimit = getPinAttemptLimiter().take(ip);
+    const deckLimit = getPinDeckAttemptLimiter().take(deck.id);
+    const retryAfterMs = Math.max(pinLimit.retryAfterMs, deckLimit.retryAfterMs);
+    if (!pinLimit.allowed || !deckLimit.allowed) {
+      return apiError(429, "rate_limited", "Too many PIN attempts. Try again shortly.", {
+        headers: { "Retry-After": String(Math.max(1, Math.ceil(retryAfterMs / 1000))) },
+      });
+    }
+
+    if (!(await verifyDeckPin(deck.id, parsed.data.role, parsed.data.pin))) {
+      return apiError(401, "invalid_pin", "That PIN is not valid");
+    }
   }
 
   try {
@@ -74,7 +86,7 @@ export async function POST(request: Request): Promise<Response> {
       deckId: deck.id,
       title: deck.title,
       role: parsed.data.role,
-      protected: true,
+      protected: protectedDeck,
       ...session,
     });
   } catch {

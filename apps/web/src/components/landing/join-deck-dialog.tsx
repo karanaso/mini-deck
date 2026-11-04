@@ -38,7 +38,11 @@ export function JoinDeckDialog({
   const { t } = useI18n();
   const [stage, setStage] = useState<Stage>("code");
   const [code, setCode] = useState("");
-  const [deck, setDeck] = useState<{ deckId: string; title: string } | null>(null);
+  const [deck, setDeck] = useState<{
+    deckId: string;
+    title: string;
+    protected: boolean;
+  } | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
@@ -66,7 +70,7 @@ export function JoinDeckDialog({
         navigate(`/d/${found.deckId}`);
         return;
       }
-      setDeck(found);
+      setDeck({ ...found, protected: found.protected !== false });
       setStage("role");
     } catch (caught) {
       const message = messageForError(caught, "deckShell.invalid.title");
@@ -80,7 +84,32 @@ export function JoinDeckDialog({
     setRole(next);
     setPin("");
     setError(null);
+    if (deck && !deck.protected) {
+      void joinOpenDeck(next);
+      return;
+    }
     setStage("pin");
+  }
+
+  async function joinOpenDeck(next: Role) {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await unlockJoinCode(code, next);
+      storeUnlockSession({
+        deckId: result.deckId,
+        role: result.role,
+        token: result.unlockToken,
+        expiresAt: result.expiresAt,
+      });
+      onOpenChange(false);
+      navigate(`/d/${result.deckId}`);
+    } catch (caught) {
+      const message = messageForError(caught, "deckShell.pin.error");
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function unlock(event: FormEvent<HTMLFormElement>) {
@@ -167,6 +196,7 @@ export function JoinDeckDialog({
               <Button
                 type="button"
                 onClick={() => chooseRole("editor")}
+                disabled={loading}
                 data-testid="join-role-edit"
               >
                 <Pencil className="h-4 w-4" />
@@ -176,12 +206,18 @@ export function JoinDeckDialog({
                 type="button"
                 variant="outline"
                 onClick={() => chooseRole("viewer")}
+                disabled={loading}
                 data-testid="join-role-view"
               >
                 <Eye className="h-4 w-4" />
                 {t("join.view")}
               </Button>
             </div>
+            {error ? (
+              <p className="text-xs text-rose-700" role="alert" data-testid="join-error">
+                {t(error.key, error.params)}
+              </p>
+            ) : null}
             <Button
               type="button"
               variant="ghost"

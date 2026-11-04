@@ -17,11 +17,13 @@ import { POST as uploadAsset } from "@/app/api/decks/[deckId]/assets/route";
 import { POST as resetAccess } from "@/app/api/decks/[deckId]/access/reset/route";
 import { POST as lookupJoin } from "@/app/api/join/lookup/route";
 import { POST as unlockJoin } from "@/app/api/join/unlock/route";
+import { issueDeckSession } from "@/server/auth";
 import { resetServerEnvForTests } from "@/server/env";
 import { resetRateLimitersForTests } from "@/server/rate-limit";
 import { resetAssetStorageForTests } from "@/server/storage";
 import { resetIntegrationState } from "../../../test/integration-helpers";
 import {
+  createOpenDeck,
   createProtectedDeck,
   params,
   unlockDeck,
@@ -125,6 +127,58 @@ describe("deck creation access values", () => {
     expect(rows[0].viewPinHash).not.toBe(deck.viewPin);
   });
 
+  it("creates an open deck with a join code and no PIN hashes", async () => {
+    const response = await createDeckRoute(
+      request("http://localhost/api/decks", {
+        body: { accessMode: "open" },
+      }),
+    );
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as {
+      deckId: string;
+      accessMode: string;
+      joinCode: string;
+      editPin: string | null;
+      viewPin: string | null;
+    };
+    expect(body.accessMode).toBe("open");
+    expect(body.joinCode).toMatch(/^\d{7}$/u);
+    expect(body.editPin).toBeNull();
+    expect(body.viewPin).toBeNull();
+
+    const { db } = getDatabase();
+    const rows = await db.select().from(decks).where(eq(decks.id, body.deckId));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      joinCode: body.joinCode,
+      editPinHash: null,
+      viewPinHash: null,
+      pinVersion: 0,
+    });
+  });
+
+  it("rejects an unknown access mode and defaults to protected without a body", async () => {
+    const invalid = await createDeckRoute(
+      request("http://localhost/api/decks", {
+        body: { accessMode: "public" },
+      }),
+    );
+    expect(invalid.status).toBe(400);
+    expect(await invalid.json()).toMatchObject({
+      error: { code: "invalid_request" },
+    });
+
+    const missingBody = await createDeckRoute(
+      request("http://localhost/api/decks"),
+    );
+    expect(missingBody.status).toBe(201);
+    expect(await missingBody.json()).toMatchObject({
+      accessMode: "protected",
+      editPin: expect.any(String),
+      viewPin: expect.any(String),
+    });
+  });
+
   it("rejects creation when production has no session secret", async () => {
     process.env.NODE_ENV = "production";
     process.env.DECK_SESSION_SECRET = "";
@@ -200,6 +254,43 @@ describe("session and unlock", () => {
     });
   });
 
+  it("opens an open deck from either link and accepts an issued session", async () => {
+    const deck = await createOpenDeck();
+
+    const editor = await sessionRoute(
+      sessionRequest(deck.deckId, deck.editToken, "10.0.3.1"),
+      params({ deckId: deck.deckId }),
+    );
+    expect(editor.status).toBe(200);
+    expect(await editor.json()).toEqual({
+      role: "editor",
+      title: deck.title,
+      protected: false,
+    });
+
+    const viewer = await sessionRoute(
+      sessionRequest(deck.deckId, deck.viewToken, "10.0.3.2"),
+      params({ deckId: deck.deckId }),
+    );
+    expect(await viewer.json()).toEqual({
+      role: "viewer",
+      title: deck.title,
+      protected: false,
+    });
+
+    const issued = await issueDeckSession(deck.deckId, "editor");
+    const session = await sessionRoute(
+      sessionRequest(deck.deckId, issued.unlockToken, "10.0.3.3"),
+      params({ deckId: deck.deckId }),
+    );
+    expect(session.status).toBe(200);
+    expect(await session.json()).toEqual({
+      role: "editor",
+      title: deck.title,
+      protected: false,
+    });
+  });
+
   it("rate limits repeated wrong PINs", async () => {
     const deck = await createProtectedDeck();
     process.env.PIN_ATTEMPT_RATE_LIMIT = "1";
@@ -239,6 +330,7 @@ describe("join code flow", () => {
     expect(await lookup.json()).toEqual({
       deckId: deck.deckId,
       title: deck.title,
+      protected: true,
     });
 
     const editor = await unlockJoin(
@@ -285,6 +377,75 @@ describe("join code flow", () => {
     expect(missing.status).toBe(404);
     expect(await missing.json()).toMatchObject({
       error: { code: "not_found" },
+    });
+  });
+
+  it("joins an open deck without a PIN and keeps the chosen role", async () => {
+    const deck = await createOpenDeck();
+
+    const lookup = await lookupJoin(
+      request("http://localhost/api/join/lookup", {
+        body: { code: deck.joinCode },
+      }),
+    );
+    expect(lookup.status).toBe(200);
+    expect(await lookup.json()).toEqual({
+      deckId: deck.deckId,
+      title: deck.title,
+      protected: false,
+    });
+
+    const editor = await unlockJoin(
+      request("http://localhost/api/join/unlock", {
+        body: { code: deck.joinCode, role: "editor" },
+      }),
+    );
+    expect(editor.status).toBe(200);
+    const editorBody = (await editor.json()) as {
+      role: string;
+      protected: boolean;
+      unlockToken: string;
+    };
+    expect(editorBody).toMatchObject({
+      deckId: deck.deckId,
+      role: "editor",
+      title: deck.title,
+      protected: false,
+      unlockToken: expect.any(String),
+    });
+
+    const viewer = await unlockJoin(
+      request("http://localhost/api/join/unlock", {
+        body: { code: deck.joinCode, role: "viewer" },
+      }),
+    );
+    expect(await viewer.json()).toMatchObject({
+      role: "viewer",
+      protected: false,
+    });
+
+    const session = await sessionRoute(
+      sessionRequest(deck.deckId, editorBody.unlockToken, "10.0.4.1"),
+      params({ deckId: deck.deckId }),
+    );
+    expect(session.status).toBe(200);
+    expect(await session.json()).toEqual({
+      role: "editor",
+      title: deck.title,
+      protected: false,
+    });
+  });
+
+  it("requires a PIN for a protected deck join", async () => {
+    const deck = await createProtectedDeck();
+    const response = await unlockJoin(
+      request("http://localhost/api/join/unlock", {
+        body: { code: deck.joinCode, role: "editor" },
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: { code: "invalid_request" },
     });
   });
 
@@ -352,6 +513,24 @@ describe("access reset", () => {
       "10.0.1.2",
     );
     expect(newSession.role).toBe("editor");
+  });
+
+  it("rejects a reset on an open deck without changing its join code", async () => {
+    const deck = await createOpenDeck();
+    const response = await resetAccess(
+      request(`http://localhost/api/decks/${deck.deckId}/access/reset`, {
+        token: deck.editToken,
+      }),
+      params({ deckId: deck.deckId }),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: { code: "pins_not_configured" },
+    });
+
+    const { db } = getDatabase();
+    const rows = await db.select().from(decks).where(eq(decks.id, deck.deckId));
+    expect(rows[0]).toMatchObject({ joinCode: deck.joinCode, pinVersion: 0 });
   });
 
   it("does not let viewers reset access", async () => {

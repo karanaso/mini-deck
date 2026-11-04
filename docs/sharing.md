@@ -25,7 +25,7 @@ Only SHA-256 hashes of the edit and view tokens are stored. Role resolution hash
 
 ## PINs and join codes
 
-New decks receive a unique seven-digit join code and two six-digit PINs: one for editing and one for read-only viewing. The creation dialog shows all three once and stores them in that browser. Only salted scrypt hashes of the PINs are stored; the join code is a non-secret lookup value.
+Deck creation asks for an access mode. A protected deck (the default) receives a unique seven-digit join code and two six-digit PINs: one for editing and one for read-only viewing. The creation dialog shows all three once and stores them in that browser. Only salted scrypt hashes of the PINs are stored; the join code is a non-secret lookup value.
 
 A protected deck can be opened in two ways:
 
@@ -34,7 +34,9 @@ A protected deck can be opened in two ways:
 
 A successful unlock is remembered for 30 days in that browser. A raw link token or join code never authorizes deck content or collaboration; the server requires the signed unlock session for protected operations. The collaboration server rejects link tokens when the deck has PIN hashes.
 
-The share dialog shows the links when the session was opened through a link, plus the join code and PINs when this browser knows them. A code-joined editor sees the code and PINs instead of the original links, because the link tokens cannot be recovered from their hashes. **Reset access** generates a new code and both PINs, invalidates old values, and signs out existing unlock sessions.
+An open deck is created with the "Open deck (no PINs)" toggle. It receives a join code and the same edit/view links, but no PINs. The edit link opens the editor, the view link opens read-only, and joining by code skips the PIN step and grants the chosen role. Open decks cannot be converted to protected later, so the choice is permanent for that deck.
+
+The share dialog shows the links when the session was opened through a link, plus the join code and PINs when this browser knows them. A code-joined editor sees the code and PINs instead of the original links, because the link tokens cannot be recovered from their hashes. For an open deck the dialog shows the join code and an open-access warning, and it offers no reset. **Reset access** on a protected deck generates a new code and both PINs, invalidates old values, and signs out existing unlock sessions.
 
 Existing decks created before PIN support have no join code or PINs and continue to use link-only access.
 
@@ -53,8 +55,9 @@ The editor derives the view token locally and shows both links. Both include the
 
 ## Limitations
 
-- Links have no expiry. An editor can reset all access values, which invalidates old PINs, join codes, and unlock sessions, but the link URLs themselves remain.
-- Anyone with an edit link and the edit PIN, or the join code and the edit PIN, can edit and reshare the deck.
+- Links have no expiry. An editor can reset a protected deck's access values, which invalidates old PINs, join codes, and unlock sessions, but the link URLs themselves remain. Open decks have no PINs to reset.
+- Anyone with an edit link and the edit PIN, or the join code and the edit PIN, can edit and reshare the deck. For an open deck, the edit link or join code alone grants editing.
+- An open deck cannot be made protected later; recreate the deck if PIN protection is needed.
 - Asset URLs (`/api/assets/{id}`) are separate 128-bit capabilities so images can render without an authorization header. A leaked asset URL exposes that image.
 - Recent decks are stored in `localStorage` on the device. Clearing site storage removes that list, not the deck or its links. Code-joined sessions are not added to recents.
 - Losing the join code, both PINs, and every remembered session makes the deck unreachable without an existing edit unlock session.

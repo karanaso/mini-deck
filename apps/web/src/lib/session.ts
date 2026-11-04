@@ -118,27 +118,28 @@ export async function unlockDeckWithPin(
   );
 }
 
+export interface JoinCodeLookup {
+  deckId: string;
+  title: string;
+  protected: boolean;
+}
+
 export async function lookupJoinCode(
   code: string,
   fetcher: typeof fetch = fetch,
-): Promise<{ deckId: string; title: string }> {
-  return postJson<{ deckId: string; title: string }>(
-    "/api/join/lookup",
-    { code },
-    {},
-    fetcher,
-  );
+): Promise<JoinCodeLookup> {
+  return postJson<JoinCodeLookup>("/api/join/lookup", { code }, {}, fetcher);
 }
 
 export async function unlockJoinCode(
   code: string,
   role: Role,
-  pin: string,
+  pin?: string,
   fetcher: typeof fetch = fetch,
 ): Promise<UnlockResult> {
   return postJson<UnlockResult>(
     "/api/join/unlock",
-    { code, role, pin },
+    pin === undefined ? { code, role } : { code, role, pin },
     {},
     fetcher,
   );

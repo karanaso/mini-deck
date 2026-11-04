@@ -37,6 +37,7 @@ export function Landing() {
   const [recents, setRecents] = useState<RecentDeck[]>([]);
   const [mounted, setMounted] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [openDeck, setOpenDeck] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [created, setCreated] = useState<{
     values: DeckAccessValues;
@@ -51,7 +52,15 @@ export function Landing() {
   async function createDeck() {
     setCreating(true);
     try {
-      const response = await fetch("/api/decks", { method: "POST" });
+      const response = await fetch("/api/decks", {
+        method: "POST",
+        ...(openDeck
+          ? {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ accessMode: "open" }),
+            }
+          : {}),
+      });
       if (!response.ok) {
         const error = await parseApiError(response);
         const message = messageForError(error, "landing.createError");
@@ -64,8 +73,8 @@ export function Landing() {
         editToken: string;
         title: string;
         joinCode: string;
-        editPin: string;
-        viewPin: string;
+        editPin: string | null;
+        viewPin: string | null;
       };
       addRecent({
         deckId: data.deckId,
@@ -182,6 +191,17 @@ export function Landing() {
                 <Link2 className="h-4 w-4" />
                 {t("join.open")}
               </Button>
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={openDeck}
+                  onChange={(event) => setOpenDeck(event.target.checked)}
+                  disabled={creating}
+                  data-testid="create-open-deck"
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                {t("landing.openDeck")}
+              </label>
               <span className="text-xs text-slate-600">{t("landing.createHint")}</span>
             </div>
           </div>

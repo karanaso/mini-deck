@@ -134,8 +134,8 @@ export async function issueDeckSession(
   role: Role,
 ): Promise<{ unlockToken: string; expiresAt: number }> {
   const deck = await loadDeck(deckId);
-  if (!deck || !isProtectedDeck(deck)) {
-    throw new Error("Deck is not PIN protected");
+  if (!deck) {
+    throw new Error("Deck not found");
   }
   const expiresAt = Date.now() + UNLOCK_SESSION_DURATION_MS;
   const unlockToken = await createUnlockSessionToken(

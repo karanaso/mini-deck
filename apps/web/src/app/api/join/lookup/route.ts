@@ -1,6 +1,6 @@
 import { apiError, getClientIp, jsonResponse } from "@/server/api";
 import { joinLookupBodySchema } from "@/server/access-validation";
-import { findDeckByJoinCode } from "@/server/auth";
+import { findDeckByJoinCode, isProtectedDeck } from "@/server/auth";
 import {
   getJoinCodeAttemptLimiter,
   getJoinLookupLimiter,
@@ -39,9 +39,13 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const deck = await findDeckByJoinCode(parsed.data.code);
-  if (!deck || !deck.editPinHash || !deck.viewPinHash) {
+  if (!deck) {
     return apiError(404, "not_found", "Deck not found");
   }
 
-  return jsonResponse({ deckId: deck.id, title: deck.title });
+  return jsonResponse({
+    deckId: deck.id,
+    title: deck.title,
+    protected: isProtectedDeck(deck),
+  });
 }

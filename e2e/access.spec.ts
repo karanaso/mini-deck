@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   createDeck,
+  createOpenDeck,
   getViewUrl,
   makeDeckLegacy,
   openDeck,
@@ -156,6 +157,53 @@ test("reset rotates the code and PINs and invalidates old access", async ({
   await viewer.getByTestId("pin-submit").click();
   await waitForDeckReady(viewer, "viewer");
   await viewerContext.close();
+});
+
+test("open decks skip PIN gates and support PIN-free joining", async ({
+  page,
+  browser,
+}) => {
+  const deck = await createOpenDeck(page);
+
+  await page.getByTestId("share-button").click();
+  const share = page.getByTestId("share-dialog");
+  await expect(share.getByTestId("share-join-code")).toHaveText(deck.joinCode);
+  await expect(share.getByTestId("share-edit-pin")).toHaveCount(0);
+  await expect(share.getByTestId("share-view-pin")).toHaveCount(0);
+  await expect(share.getByTestId("reset-access")).toHaveCount(0);
+  const viewUrl = await page.getByTestId("view-link-url").inputValue();
+  await page.keyboard.press("Escape");
+
+  const editorContext = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+  });
+  const editor = await editorContext.newPage();
+  await openDeck(editor, deck.url, "editor");
+  await expect(editor.getByTestId("pin-gate")).toHaveCount(0);
+  await editorContext.close();
+
+  const viewerContext = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+  });
+  const viewer = await viewerContext.newPage();
+  await openDeck(viewer, viewUrl, "viewer");
+  await expect(viewer.getByTestId("pin-gate")).toHaveCount(0);
+  await expect(viewer.getByTestId("share-button")).toHaveCount(0);
+  await viewerContext.close();
+
+  const joinContext = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+  });
+  const joiner = await joinContext.newPage();
+  await joiner.goto("/", { waitUntil: "networkidle" });
+  await joiner.getByTestId("join-deck-button").click();
+  await joiner.getByTestId("join-code-input").fill(deck.joinCode);
+  await joiner.getByTestId("join-code-submit").click();
+  await expect(joiner.getByTestId("join-deck-title")).toHaveText("Untitled deck");
+  await joiner.getByTestId("join-role-edit").click();
+  await waitForDeckReady(joiner, "editor");
+  await expect(joiner.getByTestId("join-pin-input")).toHaveCount(0);
+  await joinContext.close();
 });
 
 test("legacy decks open from links without a PIN", async ({ page, browser }) => {

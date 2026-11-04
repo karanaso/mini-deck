@@ -15,11 +15,12 @@ Scope: capability links, HTTP APIs, WebSocket collaboration, asset handling, cli
 
 ### Deck access PINs
 
-- New decks receive a unique seven-digit join code and two six-digit role PINs generated from a cryptographic random source.
+- Protected decks receive a unique seven-digit join code and two six-digit role PINs generated from a cryptographic random source.
+- Open decks receive a join code but no PINs: both PIN hashes are `NULL` and `pinVersion` stays `0`. Their edit and view links are bearer capabilities with the same role split as legacy link-only decks. Open mode is opt-in at creation and cannot be converted to protected later.
 - Role PINs are stored only as salted scrypt hashes. A six-digit PIN is low entropy, so scrypt and attempt limits are required.
 - Unlocks are stateless 30-day HMAC-signed sessions bound to the deck, role, and PIN version. `DECK_SESSION_SECRET` is shared by the web and collaboration services and must be at least 32 characters in production.
 - The join code is a public identifier, not a secret. It resolves only the deck title; slide content and collaboration require a role PIN.
-- A raw edit or view link token does not authorize protected deck APIs or collaboration. The collaboration server rejects link tokens when the deck has role PIN hashes.
+- A raw edit or view link token does not authorize protected deck APIs or collaboration. The collaboration server rejects link tokens when the deck has role PIN hashes; open decks have none, so their tokens authorize directly and viewer connections stay read-only.
 - Reset access rotates the join code and both PINs and increments the PIN version, invalidating all prior unlock sessions and values.
 - Join lookups and PIN attempts are rate-limited per client, code, and deck. The limits are process-local.
 - A forgotten PIN is recoverable only through an existing edit unlock session; losing every access value and remembered session makes the deck unreachable.
@@ -102,7 +103,7 @@ This is a collaborative UX safeguard, not an authorization boundary. Every edito
 - `packages/deck/test/ownership.test.ts` — owner storage, duplication ownership, and deletion conflicts.
 - `e2e/collaboration.spec.ts` — cross-editor delete blocking, owner prompt, mixed selection, cut, and slide protection.
 - `apps/web/test/api.integration.test.ts` — hashed storage, generic 404, headers, upload validation, viewer rejection, rate limiting.
-- `apps/web/test/access.integration.test.ts` — PIN creation, link unlock, join lookup/unlock, reset rotation, legacy link-only decks.
+- `apps/web/test/access.integration.test.ts` — PIN creation, open-deck creation and joins, link unlock, join lookup/unlock, reset rotation and open-deck rejection, legacy link-only decks.
 - `apps/collab/test/collab.integration.test.ts` — invalid tokens, link-token rejection for protected decks, unlock sessions, read-only writes, awareness, persistence, log redaction.
 - `e2e/sharing.spec.ts` — fragment privacy, headers, share dialog, viewer restrictions.
 - `e2e/clipboard.spec.ts` — malformed envelopes and read-only paste.
